@@ -73,11 +73,6 @@ func (w *World) tick() {
 			accAccumulators[bi] = make(chan vector.Vector)
 			go w.calculateAcceleration(body, accAccumulators[bi])
 		}
-		for bi, body := range w.bodies {
-			deltaA := <-accAccumulators[bi]
-			body.Acc.X = deltaA.X
-			body.Acc.Y = deltaA.Y
-		}
 
 		// Integrate and check for collisions
 		var colliding []*BodyPair
@@ -92,7 +87,10 @@ func (w *World) tick() {
 			return false
 		}
 
-		for _, body := range w.bodies {
+		for bi, body := range w.bodies {
+			deltaA := <-accAccumulators[bi]
+			body.Acc.X = deltaA.X
+			body.Acc.Y = deltaA.Y
 			body.Vel.Add(body.Acc)
 			body.Pos.Add(body.Vel)
 			for _, body2 := range w.bodies {
