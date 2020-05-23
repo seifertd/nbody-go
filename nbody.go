@@ -1,4 +1,4 @@
-package nbody
+package main
 
 import (
 	crypto_rand "crypto/rand"
@@ -68,10 +68,8 @@ func (w *World) calculateAcceleration(body *body.Body, c chan vector.Vector) {
 func (w *World) tick() {
 	for i := 0; i < w.spt; i++ {
 		w.elapsed += 1
-		accAccumulators := make([]chan vector.Vector, len(w.bodies))
-		for bi, body := range w.bodies {
-			accAccumulators[bi] = make(chan vector.Vector)
-			go w.calculateAcceleration(body, accAccumulators[bi])
+		for _, body := range w.bodies {
+			go body.CalculateAcceleration(w.bodies)
 		}
 
 		// Integrate and check for collisions
@@ -87,8 +85,8 @@ func (w *World) tick() {
 			return false
 		}
 
-		for bi, body := range w.bodies {
-			deltaA := <-accAccumulators[bi]
+		for _, body := range w.bodies {
+			deltaA := <-body.AccChan
 			body.Acc.X = deltaA.X
 			body.Acc.Y = deltaA.Y
 			body.Vel.Add(body.Acc)
@@ -160,7 +158,7 @@ func randomWorld(w, h, n int, pf float64, dense bool) *World {
 		maxDistance *= 0.3
 	}
 	for i := 1; i < n+1; i++ {
-		distance := 40.0 + math_rand.Float64()*maxDistance
+		distance := 50.0 + math_rand.Float64()*maxDistance
 		theta := math_rand.Float64() * math.Pi * 2
 		pos := vector.New2DVector(-distance*math.Cos(theta)*world.mpp, -distance*math.Sin(theta)*world.mpp)
 		circularOrbitVel := math.Sqrt(G * center.Mass / pos.Magnitude())
@@ -178,9 +176,9 @@ func randomWorld(w, h, n int, pf float64, dense bool) *World {
 			baseMass = 1e7
 			baseRadius = 4.0
 		}
-		world.bodies[i] = &body.Body{fmt.Sprintf("P%v", i), pos, vel,
-			vector.New2DVector(0, 0), (1.0 + math_rand.Float64()) * baseRadius * world.mpp,
-			baseMass * math_rand.Float64()}
+		world.bodies[i] = body.NewBodyVector(fmt.Sprintf("P%v", i), pos, vel,
+			(1.0+math_rand.Float64())*baseRadius*world.mpp,
+			baseMass*math_rand.Float64())
 		fmt.Printf("%v\n", world.bodies[i])
 	}
 	return world
@@ -188,15 +186,15 @@ func randomWorld(w, h, n int, pf float64, dense bool) *World {
 
 func main() {
 	initRand()
-	world := randomWorld(800, 800, 40, 1.0, true)
+	world := randomWorld(800, 800, 40, 0.5, false)
 	fmt.Printf("Created world with %v bodies\n", len(world.bodies))
 	start := time.Now()
-	for j := 0; j < 1440; j++ {
+	for j := 0; j < 1440*7; j++ {
 		world.tick()
 	}
 	for _, body := range world.bodies {
 		fmt.Printf("%v\n", body)
 	}
 	elapsed := time.Since(start)
-	fmt.Printf("24 hours of sim took %v real time", elapsed)
+	fmt.Printf("1 week of sim took %v real time", elapsed)
 }

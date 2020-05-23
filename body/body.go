@@ -6,6 +6,9 @@ import (
 	"math"
 )
 
+const G = 6.674e-11
+
+
 type Body struct {
 	Name   string
 	Pos    vector.Vector
@@ -13,18 +16,39 @@ type Body struct {
 	Acc    vector.Vector
 	Radius float64
 	Mass   float64
+	AccChan chan vector.Vector
 }
 
 func NewBody(name string, x float64, y float64, r float64, m float64,
 	vx float64, vy float64) *Body {
 	return &Body{name, vector.New2DVector(x, y), vector.New2DVector(vx, vy),
-		vector.New2DVector(0, 0), r, m}
+		vector.New2DVector(0, 0), r, m, make(chan vector.Vector)}
+}
+func NewBodyVector(name string, pos vector.Vector, vel vector.Vector,
+	r float64, m float64) *Body {
+		return &Body{name, pos, vel, vector.New2DVector(0, 0),
+			r, m, make(chan vector.Vector)}
 }
 
 func (b Body) String() string {
 	return fmt.Sprintf("BODY: %v: m:%v vel:%v,%v pos:%v,%v r:%v",
 		b.Name, b.Mass, b.Vel.X, b.Vel.Y, b.Pos.X, b.Pos.Y, b.Radius)
 }
+
+func (b *Body) CalculateAcceleration(others []*Body) {
+	deltaA := vector.Vector{0, 0, 0}
+	for _, body2 := range others {
+		if b == body2 {
+			continue
+		}
+		d := math.Sqrt(math.Pow(b.Pos.X-body2.Pos.X, 2) + math.Pow(b.Pos.Y-body2.Pos.Y, 2))
+		acc := vector.New2DVector((body2.Pos.X-b.Pos.X)/d, (body2.Pos.Y-b.Pos.Y)/d)
+		acc.MultScalar(G * body2.Mass / (d * d)) // TODO: fix to include b.Mass
+		deltaA.Add(acc)
+	}
+	b.AccChan <- deltaA
+}
+
 
 func (b Body) Collides(other *Body) bool {
 	if &b == other {
