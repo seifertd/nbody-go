@@ -5,17 +5,23 @@ import (
 	"dseifert.net/nbody/body"
 	"dseifert.net/nbody/vector"
 	"encoding/binary"
-	//	"github.com/hajimehoshi/ebiten"
 	"fmt"
+	"github.com/faiface/pixel"
+	"github.com/faiface/pixel/pixelgl"
+	"github.com/faiface/pixel/text"
+	"golang.org/x/image/colornames"
+	"golang.org/x/image/font/basicfont"
+	"image"
+	_ "image/png"
 	"math"
 	math_rand "math/rand"
+	"os"
 	"time"
 )
 
 const (
 	G          = 6.674e-11
-	MinRadius  = 0.5
-	CircleStep = 10
+	MinRadius  = 1.0
 )
 
 func initRand() {
@@ -25,6 +31,19 @@ func initRand() {
 		panic("Unable to seed math/rand package with secure random number generator")
 	}
 	math_rand.Seed(int64(binary.LittleEndian.Uint64(b[:])))
+}
+
+func loadPicture(path string) (pixel.Picture, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	img, _, err := image.Decode(file)
+	if err != nil {
+		return nil, err
+	}
+	return pixel.PictureDataFromImage(img), nil
 }
 
 type World struct {
@@ -41,6 +60,10 @@ type World struct {
 type BodyPair struct {
 	body1 *body.Body
 	body2 *body.Body
+}
+
+func (w World) worldToScreen(coords *vector.Vector) vector.Vector {
+   return vector.Vector{coords.X / w.mpp * w.scale, coords.Y / w.mpp * w.scale, 0}
 }
 
 func (w World) worldTime() string {
@@ -153,12 +176,12 @@ func randomWorld(w, h, n int, pf float64, dense bool) *World {
 	world.bodies[0] = body.NewBody("Mother", 0, 0, 30*world.mpp, 5e28, 0, 0)
 	fmt.Printf("%v\n", world.bodies[0])
 	center := world.bodies[0]
-	maxDistance := math.Sqrt(float64(iPow(world.width, 2) + iPow(world.height, 2)))
+	maxDistance := math.Sqrt(float64(iPow(world.width, 2) + iPow(world.height, 2))) / 2.0
 	if dense {
 		maxDistance *= 0.3
 	}
 	for i := 1; i < n+1; i++ {
-		distance := 50.0 + math_rand.Float64()*maxDistance
+		distance := 200.0 + math_rand.Float64()*maxDistance
 		theta := math_rand.Float64() * math.Pi * 2
 		pos := vector.New2DVector(-distance*math.Cos(theta)*world.mpp, -distance*math.Sin(theta)*world.mpp)
 		circularOrbitVel := math.Sqrt(G * center.Mass / pos.Magnitude())
@@ -184,8 +207,91 @@ func randomWorld(w, h, n int, pf float64, dense bool) *World {
 	return world
 }
 
-func main() {
+func run() {
 	initRand()
+	world := randomWorld(800, 800, 40, 0.5, false)
+	cfg := pixelgl.WindowConfig{
+		Title:  "N-Body Problem",
+		Bounds: pixel.R(0, 0, 800, 800),
+		VSync:  true,
+	}
+
+	win, err := pixelgl.NewWindow(cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	// initialize font
+	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
+  infoTxt := text.New(pixel.V(600,780), basicAtlas)
+
+  // initialize sprites
+	sunPic, err := loadPicture("sun.png")
+	if err != nil {
+		panic(err)
+	}
+	planetPic, err := loadPicture("planetsheet.png")
+	if err != nil {
+		panic(err)
+	}
+	sunSprite := pixel.NewSprite(sunPic, sunPic.Bounds())
+	var planetSprites []*pixel.Sprite
+	for x := planetPic.Bounds().Min.X; x < planetPic.Bounds().Max.X; x += 128 {
+		for y := planetPic.Bounds().Min.Y; y < planetPic.Bounds().Max.Y; y += 128 {
+			planetSprites = append(planetSprites, pixel.NewSprite(planetPic, pixel.R(x, y, x+128, y+128)))
+		}
+	}
+  bodySprites := make(map[string]*pixel.Sprite)
+	for bi, body := range world.bodies {
+		if bi == 0 {
+			bodySprites[body.Id] = sunSprite
+		} else {
+			idx := math_rand.Intn(len(planetSprites))
+			bodySprites[body.Id] = planetSprites[idx]
+		}
+	}
+
+	for !win.Closed() {
+		// zoom
+		world.scale *= math.Pow(1.2, win.MouseScroll().Y)
+		win.Clear(colornames.Black)
+		mat := pixel.IM
+
+		for _, body := range world.bodies {
+			var spriteSize float64
+			if body.Id == "Mother" {
+				spriteSize = 45.0
+			} else {
+				spriteSize = 128.0
+			}
+			sprite := bodySprites[body.Id]
+			brp := body.Radius * world.scale / world.mpp
+			if brp < MinRadius {
+			  brp = MinRadius
+			}
+			sf := brp / spriteSize
+			bodyMat := mat.ScaledXY(pixel.ZV, pixel.V(sf, sf))
+			screenPos := world.worldToScreen(&body.Pos)
+			screenPos.Add(vector.Vector{win.Bounds().Center().X, win.Bounds().Center().Y, 0})
+			bodyMat = bodyMat.Moved(pixel.V(screenPos.X, screenPos.Y))
+			sprite.Draw(win, bodyMat)
+		}
+		// Update info text
+		infoTxt.Clear()
+		fmt.Fprintf(infoTxt, "N: %v\n", len(world.bodies))
+		fmt.Fprintf(infoTxt, "t: %v\n", world.worldTime())
+		fmt.Fprintf(infoTxt, "S: %4.2f", world.scale)
+		infoTxt.Draw(win, pixel.IM)
+		win.Update()
+		world.tick()
+	}
+}
+
+func main() {
+	pixelgl.Run(run)
+}
+
+func testMain() {
 	world := randomWorld(800, 800, 40, 0.5, false)
 	fmt.Printf("Created world with %v bodies\n", len(world.bodies))
 	start := time.Now()
