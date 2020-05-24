@@ -166,7 +166,7 @@ func randomWorld(w, h, n int, pf float64, dense bool) *World {
 	world := &World{
 		scale:   0.3,
 		mpp:     5e5,
-		spt:     60,
+		spt:     1,
 		running: true,
 		elapsed: 0,
 		bodies:  make([]*body.Body, n+1),
@@ -209,7 +209,7 @@ func randomWorld(w, h, n int, pf float64, dense bool) *World {
 
 func run() {
 	initRand()
-	world := randomWorld(800, 800, 40, 0.5, false)
+	world := randomWorld(800, 800, 60, 0.5, false)
 	cfg := pixelgl.WindowConfig{
 		Title:  "N-Body Problem",
 		Bounds: pixel.R(0, 0, 800, 800),
@@ -223,7 +223,7 @@ func run() {
 
 	// initialize font
 	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
-  infoTxt := text.New(pixel.V(600,780), basicAtlas)
+	infoTxt := text.New(pixel.V(600,780), basicAtlas)
 
   // initialize sprites
 	sunPic, err := loadPicture("sun.png")
@@ -241,7 +241,7 @@ func run() {
 			planetSprites = append(planetSprites, pixel.NewSprite(planetPic, pixel.R(x, y, x+128, y+128)))
 		}
 	}
-  bodySprites := make(map[string]*pixel.Sprite)
+	bodySprites := make(map[string]*pixel.Sprite)
 	for bi, body := range world.bodies {
 		if bi == 0 {
 			bodySprites[body.Id] = sunSprite
@@ -292,7 +292,7 @@ func main() {
 }
 
 func testMain() {
-	world := randomWorld(800, 800, 40, 0.5, false)
+	world := randomWorld(800, 800, 60, 0.5, false)
 	fmt.Printf("Created world with %v bodies\n", len(world.bodies))
 	start := time.Now()
 	for j := 0; j < 1440*7; j++ {
