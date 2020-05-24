@@ -10,6 +10,7 @@ const G = 6.674e-11
 
 
 type Body struct {
+	Id     string
 	Name   string
 	Pos    vector.Vector
 	Vel    vector.Vector
@@ -21,12 +22,12 @@ type Body struct {
 
 func NewBody(name string, x float64, y float64, r float64, m float64,
 	vx float64, vy float64) *Body {
-	return &Body{name, vector.New2DVector(x, y), vector.New2DVector(vx, vy),
+	return &Body{name, name, vector.New2DVector(x, y), vector.New2DVector(vx, vy),
 		vector.New2DVector(0, 0), r, m, make(chan vector.Vector)}
 }
 func NewBodyVector(name string, pos vector.Vector, vel vector.Vector,
 	r float64, m float64) *Body {
-		return &Body{name, pos, vel, vector.New2DVector(0, 0),
+		return &Body{name, name, pos, vel, vector.New2DVector(0, 0),
 			r, m, make(chan vector.Vector)}
 }
 
