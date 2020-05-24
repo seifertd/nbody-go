@@ -6,6 +6,7 @@ import (
 	"dseifert.net/nbody/vector"
 	"encoding/binary"
 	"fmt"
+	"github.com/docopt/docopt-go"
 	"github.com/faiface/pixel"
 	"github.com/faiface/pixel/pixelgl"
 	"github.com/faiface/pixel/text"
@@ -16,12 +17,14 @@ import (
 	"math"
 	math_rand "math/rand"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 )
 
 const (
-	G          = 6.674e-11
-	MinRadius  = 1.0
+	G         = 6.674e-11
+	MinRadius = 2.0
 )
 
 func initRand() {
@@ -63,7 +66,7 @@ type BodyPair struct {
 }
 
 func (w World) worldToScreen(coords *vector.Vector) vector.Vector {
-   return vector.Vector{coords.X / w.mpp * w.scale, coords.Y / w.mpp * w.scale, 0}
+	return vector.Vector{coords.X / w.mpp * w.scale, coords.Y / w.mpp * w.scale, 0}
 }
 
 func (w World) worldTime() string {
@@ -89,6 +92,9 @@ func (w *World) calculateAcceleration(body *body.Body, c chan vector.Vector) {
 }
 
 func (w *World) tick() {
+	if !w.running {
+		return
+	}
 	for i := 0; i < w.spt; i++ {
 		w.elapsed += 1
 		for _, body := range w.bodies {
@@ -162,7 +168,7 @@ func iPow(a, b int) int {
 	return result
 }
 
-func randomWorld(w, h, n int, pf float64, dense bool) *World {
+func randomWorld(w, h, n int, pf float64, df float64) *World {
 	world := &World{
 		scale:   0.3,
 		mpp:     5e5,
@@ -176,10 +182,8 @@ func randomWorld(w, h, n int, pf float64, dense bool) *World {
 	world.bodies[0] = body.NewBody("Mother", 0, 0, 30*world.mpp, 5e28, 0, 0)
 	fmt.Printf("%v\n", world.bodies[0])
 	center := world.bodies[0]
-	maxDistance := math.Sqrt(float64(iPow(world.width, 2) + iPow(world.height, 2))) / 2.0
-	if dense {
-		maxDistance *= 0.3
-	}
+	maxDistance := math.Sqrt(float64(iPow(world.width, 2)+iPow(world.height, 2))) / 2.0
+	maxDistance *= df
 	for i := 1; i < n+1; i++ {
 		distance := 200.0 + math_rand.Float64()*maxDistance
 		theta := math_rand.Float64() * math.Pi * 2
@@ -207,12 +211,51 @@ func randomWorld(w, h, n int, pf float64, dense bool) *World {
 	return world
 }
 
+func usage() string {
+	return `Usage: nbody [-h -d<dimensions> -s=<spt> -p=<pf> -r=<df> -n=<numBodies>] MODE
+Run N-Body simulation in mode MODE
+Arguments:
+  MODE        mode of the simulation, one of random, moon, solar
+Options:
+  -h --help
+	-d=<dimensions>, --dimensions=<dimensions>  dimensions of screen in pixels [default: 1024x1024]
+	-s=<spt>  Seconds of world time to calculate per UI tick [default: 1]
+	-p=<pf>   Perturbation factor for random world generation [default: 0.2]
+	-r=<df>   Distance factor for random world generation [default: 1.0]
+	-n=<numBodies>, --number=<numBodies>  Number of bodies to start [default: 60]
+`
+}
+
 func run() {
+	options, opterr := docopt.ParseDoc(usage())
+	if opterr != nil {
+		panic(opterr)
+	}
+  dims, _ := options.String("--dimensions")
+	width, height := func () (int, int) {
+		elems := strings.Split(dims, "x")
+		w, _ := strconv.Atoi(elems[0])
+		h, _ := strconv.Atoi(elems[1])
+		return w, h
+	}()
+	numBodies, _ := options.Int("--number")
+	pf, _ := options.Float64("-p")
+	df, _ := options.Float64("-r")
+	mode, _ := options.String("MODE")
+
 	initRand()
-	world := randomWorld(800, 800, 60, 0.5, false)
+
+	var world *World
+	if mode == "random" {
+		world = randomWorld(width, height, numBodies, pf, df)
+	} else {
+		fmt.Printf("MODE %v is not valid\n", mode)
+		fmt.Print(usage())
+		os.Exit(2)
+	}
 	cfg := pixelgl.WindowConfig{
 		Title:  "N-Body Problem",
-		Bounds: pixel.R(0, 0, 800, 800),
+		Bounds: pixel.R(0, 0, float64(width), float64(height)),
 		VSync:  true,
 	}
 
@@ -223,9 +266,9 @@ func run() {
 
 	// initialize font
 	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
-	infoTxt := text.New(pixel.V(600,780), basicAtlas)
+	infoTxt := text.New(pixel.V(win.Bounds().Max.X-200, win.Bounds().Max.Y-20), basicAtlas)
 
-  // initialize sprites
+	// initialize sprites
 	sunPic, err := loadPicture("sun.png")
 	if err != nil {
 		panic(err)
@@ -251,12 +294,47 @@ func run() {
 		}
 	}
 
+  followBody := -1
+	center := vector.Vector{win.Bounds().Center().X, win.Bounds().Center().Y, 0}
+	offset := center
+
 	for !win.Closed() {
+
+		if win.JustPressed(pixelgl.KeySpace) {
+			world.running = !world.running
+		}
+		if win.JustPressed(pixelgl.KeyN) {
+			if followBody == -1 {
+				followBody = 1
+			} else {
+				followBody += 1
+				if followBody >= len(world.bodies) {
+					followBody = 1
+				}
+			}
+		}
+		if win.JustPressed(pixelgl.KeyC) {
+			followBody = -1
+			offset = center
+		}
+		if win.Pressed(pixelgl.KeyI) {
+			world.spt += 1
+		}
+		if win.Pressed(pixelgl.KeyK) {
+			world.spt -= 1
+			if world.spt == 0 {
+				world.spt = 1
+			}
+		}
 		// zoom
 		world.scale *= math.Pow(1.2, win.MouseScroll().Y)
 		win.Clear(colornames.Black)
 		mat := pixel.IM
 
+    if followBody >= 0 && followBody < len(world.bodies) {
+			offset = vector.Vector{center.X, center.Y, center.Z}
+			offset.Sub(world.worldToScreen(&world.bodies[followBody].Pos))
+		}
 		for _, body := range world.bodies {
 			var spriteSize float64
 			if body.Id == "Mother" {
@@ -267,12 +345,12 @@ func run() {
 			sprite := bodySprites[body.Id]
 			brp := body.Radius * world.scale / world.mpp
 			if brp < MinRadius {
-			  brp = MinRadius
+				brp = MinRadius
 			}
 			sf := brp / spriteSize
 			bodyMat := mat.ScaledXY(pixel.ZV, pixel.V(sf, sf))
 			screenPos := world.worldToScreen(&body.Pos)
-			screenPos.Add(vector.Vector{win.Bounds().Center().X, win.Bounds().Center().Y, 0})
+			screenPos.Add(offset)
 			bodyMat = bodyMat.Moved(pixel.V(screenPos.X, screenPos.Y))
 			sprite.Draw(win, bodyMat)
 		}
@@ -280,7 +358,8 @@ func run() {
 		infoTxt.Clear()
 		fmt.Fprintf(infoTxt, "N: %v\n", len(world.bodies))
 		fmt.Fprintf(infoTxt, "t: %v\n", world.worldTime())
-		fmt.Fprintf(infoTxt, "S: %4.2f", world.scale)
+		fmt.Fprintf(infoTxt, "S: %4.2f\n", world.scale)
+		fmt.Fprintf(infoTxt, "dt: %v", world.spt)
 		infoTxt.Draw(win, pixel.IM)
 		win.Update()
 		world.tick()
@@ -292,7 +371,7 @@ func main() {
 }
 
 func testMain() {
-	world := randomWorld(800, 800, 60, 0.5, false)
+	world := randomWorld(1024, 1024, 60, 0.5, 1.0)
 	fmt.Printf("Created world with %v bodies\n", len(world.bodies))
 	start := time.Now()
 	for j := 0; j < 1440*7; j++ {
