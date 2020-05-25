@@ -32,6 +32,16 @@ $ ./nbody solar
 
 This mode does not take any other flags.
 
+## While Sim is Running
+
+* Press the `I` key to speed up the simulation (increases seconds of world time per UI tick)
+* Press the `K` key to slow the simulation down (decreases seconds of world time per UI tick)
+* Press the `N` key repeatedly to cycle through the bodies and center them on the screen
+* Press the `C` key to re-center the display
+* Use scroll wheel of 2-finger swipe to zoom in and out.
+
+## Usage
+
     Usage: nbody [-hP -d<dimensions> -s=<spt> -p=<pf> -r=<df> -n=<numBodies> -m=<numMoons] MODE
     Run N-Body simulation in mode MODE
     Arguments:
