@@ -13,10 +13,14 @@ specifying a non zero -p flag. The bodies can be clustered closer to the central
 body by specifying a -r < 1.0. -r values greater than 1 just spread the distribution
 of the bodies out more.
 
-2. Simulate large central body with bodies with moonlets all in circular orbits. Use -n 
-   to control the number of bodies and -m to dictate how many moonlets per body.
+2. Simulate large central body with planetoids with moonlets all in circular orbits. Use -n 
+   to control the total number of bodies and -m to dictate how many moonlets per body.
+   The sim will create enough planetoids to ensure the total number of planetoids and
+   moonlets created is less than the value of the -n flag.
+
+   This will create 3 planetoids, each with 2 moonlets for 15 bodies total:
 ```bash
-$ ./nbody moons -n 10 -m 2 -r 1.2 -d 768x768
+$ ./nbody moons -n 15 -m 2 -r 1.2 -d 768x768
 ```
 
 The -r flag can be used to stretch out the distance from center of the bodies.
