@@ -24,7 +24,7 @@ import (
 
 const (
 	G         = 6.674e-11
-	MinRadius = 2.0
+	MinRadius = 3.0
 )
 
 func initRand() {
@@ -168,6 +168,89 @@ func iPow(a, b int) int {
 	return result
 }
 
+func solarSystem(w, h int) *World {
+	world := &World{
+		scale:   1.0,
+		mpp:     5.5e8,
+		spt:     600,
+		running: true,
+		elapsed: 0,
+		bodies:  make([]*body.Body, 6),
+		width:   w,
+		height:  h,
+	}
+
+	world.bodies[0] = body.NewBody("Sol", 0, 0, 696_340_000, 1.9885e30, 0.0, 0.0)
+	world.bodies[0].Id = "Mother"
+	world.bodies[1] = body.NewBody("Mercury", 46e9, 0, 2_439_700, 0.33011e24, 0.0, 58.98e3)
+	world.bodies[2] = body.NewBody("Venus", 0, 107.48e9, 6_051_800, 4.86750e24, -35.26e3, 0.0)
+	world.bodies[3] = body.NewBody("Mars", 0, -206.62e9, 3_389_500, 0.64171e24, 26.50e3, 0.0)
+	earth := body.NewBody("Earth", -147.09e9, 0, 6_371_000, 5.9724e24, 0.0, -30.29e3)
+	world.bodies[4] = earth
+	luna := body.NewBody("Luna", earth.Pos.X - 0.3633e9, 0, 1_737_400, 0.07346e24, 0.0, earth.Vel.Y - 1.082e3)
+	world.bodies[5] = luna
+
+	for _, body := range world.bodies {
+		fmt.Printf("%v\n", body)
+	}
+	return world
+}
+
+func randomWithMoons(w, h, n, m int) *World {
+	fmt.Printf("Making %v planets with %v moons each\n", n, m)
+	world := &World{
+		scale:   0.1,
+		mpp:     5e5,
+		spt:     1,
+		running: true,
+		elapsed: 0,
+		bodies:  make([]*body.Body, n * m + n + 1),
+		width:   w,
+		height:  h,
+	}
+	world.bodies[0] = body.NewBody("Mother", 0, 0, 30*world.mpp, 5e28, 0, 0)
+	center := world.bodies[0]
+	maxDistance := math.Sqrt(float64(iPow(world.width, 2)+iPow(world.height, 2))) * 2.0
+	bi := 1
+	for i := 0; i < n; i++ {
+		distance := 200.0 + math_rand.Float64()*maxDistance
+		theta := math_rand.Float64() * math.Pi * 2
+		pos := vector.New2DVector(-distance*math.Cos(theta)*world.mpp, -distance*math.Sin(theta)*world.mpp)
+		circularOrbitVel := math.Sqrt(G * center.Mass / pos.Magnitude())
+		u := pos.Unit()
+		un := u.Normal2D()
+		vel := vector.Vector{un.X, un.Y, un.Z}
+		vel.MultScalar(circularOrbitVel)
+		mass := math_rand.Float64() * 1e26
+		radius := float64(8 + math_rand.Intn(8)) * world.mpp
+		world.bodies[bi] = body.NewBody(fmt.Sprintf("P%v", i), pos.X, pos.Y, radius, mass, vel.X, vel.Y)
+		fmt.Printf("%v\n", world.bodies[bi])
+		bi += 1
+		for j := 0; j < m; j++ {
+			//moon
+			d := radius + float64(10 + math_rand.Intn(40)) * world.mpp
+			// moon vel
+			moonOrbVel := math.Sqrt(G * mass / d)
+			var sign float64
+			if j == 1 {
+				sign = 1
+			} else {
+				sign = -1
+			}
+			mu := vector.Vector{0, sign, 0}
+			mv := vector.Vector{vel.X, vel.Y, vel.Z}
+			mu.MultScalar(moonOrbVel)
+			mv.Add(mu)
+			mm := 1e5 * math_rand.Float64()
+			mr := float64(1 + math_rand.Intn(4)) * world.mpp
+			world.bodies[bi] = body.NewBody(fmt.Sprintf("P%vM%v", i, j), pos.X - sign * d, pos.Y, mr, mm, mv.X, mv.Y)
+			fmt.Printf("%v\n", world.bodies[bi])
+			bi += 1
+		}
+	}
+	return world
+}
+
 func randomWorld(w, h, n int, pf float64, df float64) *World {
 	world := &World{
 		scale:   0.3,
@@ -212,10 +295,10 @@ func randomWorld(w, h, n int, pf float64, df float64) *World {
 }
 
 func usage() string {
-	return `Usage: nbody [-h -d<dimensions> -s=<spt> -p=<pf> -r=<df> -n=<numBodies>] MODE
+	return `Usage: nbody [-h -d<dimensions> -s=<spt> -p=<pf> -r=<df> -n=<numBodies> -m=<numMoons] MODE
 Run N-Body simulation in mode MODE
 Arguments:
-  MODE        mode of the simulation, one of random, moon, solar
+  MODE        mode of the simulation, one of random, moons, solar
 Options:
   -h --help
 	-d=<dimensions>, --dimensions=<dimensions>  dimensions of screen in pixels [default: 1024x1024]
@@ -223,6 +306,7 @@ Options:
 	-p=<pf>   Perturbation factor for random world generation [default: 0.2]
 	-r=<df>   Distance factor for random world generation [default: 1.0]
 	-n=<numBodies>, --number=<numBodies>  Number of bodies to start [default: 60]
+	-m=<numMoons>, --moons=<numMoons>     Number of moons per body [default: 3]
 `
 }
 
@@ -239,6 +323,7 @@ func run() {
 		return w, h
 	}()
 	numBodies, _ := options.Int("--number")
+	numMoons, _ := options.Int("--moons")
 	pf, _ := options.Float64("-p")
 	df, _ := options.Float64("-r")
 	mode, _ := options.String("MODE")
@@ -248,6 +333,14 @@ func run() {
 	var world *World
 	if mode == "random" {
 		world = randomWorld(width, height, numBodies, pf, df)
+	} else if mode == "solar" {
+		world = solarSystem(width, height)
+	} else if mode == "moons" {
+		totalBodies := numBodies
+		for (numBodies * numMoons + numBodies) > totalBodies {
+			numBodies -= 1
+		}
+		world = randomWithMoons(width, height, numBodies, numMoons)
 	} else {
 		fmt.Printf("MODE %v is not valid\n", mode)
 		fmt.Print(usage())
@@ -309,7 +402,7 @@ func run() {
 			} else {
 				followBody += 1
 				if followBody >= len(world.bodies) {
-					followBody = 1
+					followBody = 0
 				}
 			}
 		}
