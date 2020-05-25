@@ -295,13 +295,14 @@ func randomWorld(w, h, n int, pf float64, df float64) *World {
 }
 
 func usage() string {
-	return `Usage: nbody [-h -d<dimensions> -s=<spt> -p=<pf> -r=<df> -n=<numBodies> -m=<numMoons] MODE
+	return `Usage: nbody [-hP -d<dimensions> -s=<spt> -p=<pf> -r=<df> -n=<numBodies> -m=<numMoons] MODE
 Run N-Body simulation in mode MODE
 Arguments:
   MODE        mode of the simulation, one of random, moons, solar
 Options:
   -h --help
 	-d=<dimensions>, --dimensions=<dimensions>  dimensions of screen in pixels [default: 1024x1024]
+	-P        Start paused
 	-s=<spt>  Seconds of world time to calculate per UI tick
 	-p=<pf>   Perturbation factor for random world generation [default: 0.2]
 	-r=<df>   Distance factor for random world generation [default: 1.0]
@@ -328,6 +329,7 @@ func run() {
 	df, _ := options.Float64("-r")
 	mode, _ := options.String("MODE")
 	spt, _ := options.Int("-s")
+	paused, _ := options.Bool("-P")
 
 	fmt.Printf("SPT: %v\n", spt)
 
@@ -352,6 +354,9 @@ func run() {
 
 	if spt > 0 {
 		world.spt = spt
+	}
+	if paused {
+		world.running = false
 	}
 
 	cfg := pixelgl.WindowConfig{
