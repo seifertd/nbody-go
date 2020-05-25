@@ -2,6 +2,7 @@ package body
 
 import (
 	"dseifert.net/nbody/vector"
+	"github.com/faiface/pixel"
 	"fmt"
 	"math"
 )
@@ -18,17 +19,18 @@ type Body struct {
 	Radius float64
 	Mass   float64
 	AccChan chan vector.Vector
+	Sprite *pixel.Sprite
 }
 
 func NewBody(name string, x float64, y float64, r float64, m float64,
-	vx float64, vy float64) *Body {
+	vx float64, vy float64, s *pixel.Sprite) *Body {
 	return &Body{name, name, vector.New2DVector(x, y), vector.New2DVector(vx, vy),
-		vector.New2DVector(0, 0), r, m, make(chan vector.Vector)}
+		vector.New2DVector(0, 0), r, m, make(chan vector.Vector), s}
 }
 func NewBodyVector(name string, pos vector.Vector, vel vector.Vector,
-	r float64, m float64) *Body {
+	r float64, m float64, s *pixel.Sprite) *Body {
 		return &Body{name, name, pos, vel, vector.New2DVector(0, 0),
-			r, m, make(chan vector.Vector)}
+			r, m, make(chan vector.Vector), s}
 }
 
 func (b Body) String() string {

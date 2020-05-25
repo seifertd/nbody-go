@@ -49,6 +49,33 @@ func loadPicture(path string) (pixel.Picture, error) {
 	return pixel.PictureDataFromImage(img), nil
 }
 
+var (
+	sprites map[string]*pixel.Sprite
+	numPlanetSprites int
+)
+func loadSprite(name, path string) *pixel.Sprite {
+	if sprites == nil {
+		sprites = make(map[string]*pixel.Sprite)
+		numPlanetSprites = 0
+	}
+	if sprite, contains := sprites[name]; contains {
+		return sprite
+	} else {
+		pic, err := loadPicture(path)
+		if err != nil {
+			panic(err)
+		}
+		sprite = pixel.NewSprite(pic, pic.Bounds())
+		sprites[name] = sprite
+		return sprite
+	}
+}
+
+func randomPlanetSprite() *pixel.Sprite {
+   name := fmt.Sprintf("planet%v", math_rand.Intn(numPlanetSprites))
+	 return sprites[name]
+}
+
 type World struct {
 	scale   float64
 	mpp     float64
@@ -180,14 +207,14 @@ func solarSystem(w, h int) *World {
 		height:  h,
 	}
 
-	world.bodies[0] = body.NewBody("Sol", 0, 0, 696_340_000, 1.9885e30, 0.0, 0.0)
+	world.bodies[0] = body.NewBody("Sol", 0, 0, 696_340_000, 1.9885e30, 0.0, 0.0, sprites["sun"])
 	world.bodies[0].Id = "Mother"
-	world.bodies[1] = body.NewBody("Mercury", 46e9, 0, 2_439_700, 0.33011e24, 0.0, 58.98e3)
-	world.bodies[2] = body.NewBody("Venus", 0, 107.48e9, 6_051_800, 4.86750e24, -35.26e3, 0.0)
-	world.bodies[3] = body.NewBody("Mars", 0, -206.62e9, 3_389_500, 0.64171e24, 26.50e3, 0.0)
-	earth := body.NewBody("Earth", -147.09e9, 0, 6_371_000, 5.9724e24, 0.0, -30.29e3)
+	world.bodies[1] = body.NewBody("Mercury", 46e9, 0, 2_439_700, 0.33011e24, 0.0, 58.98e3, sprites["mercury"])
+	world.bodies[2] = body.NewBody("Venus", 0, 107.48e9, 6_051_800, 4.86750e24, -35.26e3, 0.0, sprites["venus"])
+	world.bodies[3] = body.NewBody("Mars", 0, -206.62e9, 3_389_500, 0.64171e24, 26.50e3, 0.0, sprites["mars"])
+	earth := body.NewBody("Earth", -147.09e9, 0, 6_371_000, 5.9724e24, 0.0, -30.29e3, sprites["earth"])
 	world.bodies[4] = earth
-	luna := body.NewBody("Luna", earth.Pos.X-0.3633e9, 0, 1_737_400, 0.07346e24, 0.0, earth.Vel.Y-1.082e3)
+	luna := body.NewBody("Luna", earth.Pos.X-0.3633e9, 0, 1_737_400, 0.07346e24, 0.0, earth.Vel.Y-1.082e3, sprites["luna"])
 	world.bodies[5] = luna
 
 	for _, body := range world.bodies {
@@ -208,7 +235,7 @@ func randomWithMoons(w, h, n, m int, df float64) *World {
 		width:   w,
 		height:  h,
 	}
-	world.bodies[0] = body.NewBody("Mother", 0, 0, 30*world.mpp, 5e28, 0, 0)
+	world.bodies[0] = body.NewBody("Mother", 0, 0, 30*world.mpp, 5e28, 0, 0, sprites["sun"])
 	center := world.bodies[0]
 	maxDistance := math.Sqrt(float64(iPow(world.width, 2)+iPow(world.height, 2))) * 2.0
 	bi := 1
@@ -223,7 +250,7 @@ func randomWithMoons(w, h, n, m int, df float64) *World {
 		vel.MultScalar(circularOrbitVel)
 		mass := math_rand.Float64() * 1e26
 		radius := float64(8+math_rand.Intn(8)) * world.mpp
-		world.bodies[bi] = body.NewBody(fmt.Sprintf("P%v", i), pos.X, pos.Y, radius, mass, vel.X, vel.Y)
+		world.bodies[bi] = body.NewBody(fmt.Sprintf("P%v", i), pos.X, pos.Y, radius, mass, vel.X, vel.Y, randomPlanetSprite())
 		fmt.Printf("%v\n", world.bodies[bi])
 		bi += 1
 		for j := 0; j < m; j++ {
@@ -243,7 +270,7 @@ func randomWithMoons(w, h, n, m int, df float64) *World {
 			mv.Add(mu)
 			mm := 1e5 * math_rand.Float64()
 			mr := float64(1+math_rand.Intn(4)) * world.mpp
-			world.bodies[bi] = body.NewBody(fmt.Sprintf("P%vM%v", i, j), pos.X-sign*d, pos.Y, mr, mm, mv.X, mv.Y)
+			world.bodies[bi] = body.NewBody(fmt.Sprintf("P%vM%v", i, j), pos.X-sign*d, pos.Y, mr, mm, mv.X, mv.Y, randomPlanetSprite())
 			fmt.Printf("%v\n", world.bodies[bi])
 			bi += 1
 		}
@@ -262,7 +289,7 @@ func randomWorld(w, h, n int, pf float64, df float64) *World {
 		width:   w,
 		height:  h,
 	}
-	world.bodies[0] = body.NewBody("Mother", 0, 0, 30*world.mpp, 5e28, 0, 0)
+	world.bodies[0] = body.NewBody("Mother", 0, 0, 30*world.mpp, 5e28, 0, 0, sprites["sun"])
 	fmt.Printf("%v\n", world.bodies[0])
 	center := world.bodies[0]
 	maxDistance := math.Sqrt(float64(iPow(world.width, 2)+iPow(world.height, 2))) / 2.0
@@ -288,7 +315,7 @@ func randomWorld(w, h, n int, pf float64, df float64) *World {
 		}
 		world.bodies[i] = body.NewBodyVector(fmt.Sprintf("P%v", i), pos, vel,
 			(1.0+math_rand.Float64())*baseRadius*world.mpp,
-			baseMass*math_rand.Float64())
+			baseMass*math_rand.Float64(), randomPlanetSprite())
 		fmt.Printf("%v\n", world.bodies[i])
 	}
 	return world
@@ -331,9 +358,29 @@ func run() {
 	spt, _ := options.Int("-s")
 	paused, _ := options.Bool("-P")
 
-	fmt.Printf("SPT: %v\n", spt)
-
 	initRand()
+
+	// initialize all the sprites
+	loadSprite("sun", "./images/sun.png")
+	loadSprite("earth", "./images/earth.png")
+	loadSprite("jupiter", "./images/earth.png")
+	loadSprite("luna", "./images/luna.png")
+	loadSprite("mars", "./images/mars.png")
+	loadSprite("venus", "./images/venus.png")
+	loadSprite("mercury", "./images/mercury.png")
+	planetPic, err := loadPicture("./images/planetsheet.png")
+	if err != nil {
+		panic(err)
+	}
+	for x := planetPic.Bounds().Min.X; x < planetPic.Bounds().Max.X; x += 128 {
+		for y := planetPic.Bounds().Min.Y; y < planetPic.Bounds().Max.Y; y += 128 {
+			name := fmt.Sprintf("planet%v", numPlanetSprites)
+			sprites[name] = pixel.NewSprite(planetPic, pixel.R(x, y, x+128, y+128))
+			numPlanetSprites += 1
+		}
+	}
+
+	fmt.Printf("LOADED SPRITES: %v", sprites)
 
 	var world *World
 	if mode == "random" {
@@ -373,32 +420,6 @@ func run() {
 	// initialize font
 	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
 	infoTxt := text.New(pixel.V(win.Bounds().Max.X-200, win.Bounds().Max.Y-20), basicAtlas)
-
-	// initialize sprites
-	sunPic, err := loadPicture("sun.png")
-	if err != nil {
-		panic(err)
-	}
-	planetPic, err := loadPicture("planetsheet.png")
-	if err != nil {
-		panic(err)
-	}
-	sunSprite := pixel.NewSprite(sunPic, sunPic.Bounds())
-	var planetSprites []*pixel.Sprite
-	for x := planetPic.Bounds().Min.X; x < planetPic.Bounds().Max.X; x += 128 {
-		for y := planetPic.Bounds().Min.Y; y < planetPic.Bounds().Max.Y; y += 128 {
-			planetSprites = append(planetSprites, pixel.NewSprite(planetPic, pixel.R(x, y, x+128, y+128)))
-		}
-	}
-	bodySprites := make(map[string]*pixel.Sprite)
-	for bi, body := range world.bodies {
-		if bi == 0 {
-			bodySprites[body.Id] = sunSprite
-		} else {
-			idx := math_rand.Intn(len(planetSprites))
-			bodySprites[body.Id] = planetSprites[idx]
-		}
-	}
 
 	followBody := -1
 	center := vector.Vector{win.Bounds().Center().X, win.Bounds().Center().Y, 0}
@@ -442,13 +463,11 @@ func run() {
 			offset.Sub(world.worldToScreen(&world.bodies[followBody].Pos))
 		}
 		for _, body := range world.bodies {
-			var spriteSize float64
-			if body.Id == "Mother" {
-				spriteSize = 45.0
-			} else {
-				spriteSize = 128.0
+			sprite := body.Sprite
+			if sprite == nil {
+				panic(fmt.Sprintf("NO SPRITE FOR BODY %v", body))
 			}
-			sprite := bodySprites[body.Id]
+			spriteSize := float64(sprite.Frame().Max.X)
 			brp := body.Radius * world.scale / world.mpp
 			if brp < MinRadius {
 				brp = MinRadius
