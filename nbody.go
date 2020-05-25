@@ -196,7 +196,7 @@ func solarSystem(w, h int) *World {
 	return world
 }
 
-func randomWithMoons(w, h, n, m int) *World {
+func randomWithMoons(w, h, n, m int, df float64) *World {
 	fmt.Printf("Making %v planets with %v moons each\n", n, m)
 	world := &World{
 		scale:   0.1,
@@ -213,7 +213,7 @@ func randomWithMoons(w, h, n, m int) *World {
 	maxDistance := math.Sqrt(float64(iPow(world.width, 2)+iPow(world.height, 2))) * 2.0
 	bi := 1
 	for i := 0; i < n; i++ {
-		distance := 200.0 + math_rand.Float64()*maxDistance
+		distance := 200.0 + math_rand.Float64()*maxDistance*df
 		theta := math_rand.Float64() * math.Pi * 2
 		pos := vector.New2DVector(-distance*math.Cos(theta)*world.mpp, -distance*math.Sin(theta)*world.mpp)
 		circularOrbitVel := math.Sqrt(G * center.Mass / pos.Magnitude())
@@ -345,7 +345,7 @@ func run() {
 		for (numBodies*numMoons + numBodies) > totalBodies {
 			numBodies -= 1
 		}
-		world = randomWithMoons(width, height, numBodies, numMoons)
+		world = randomWithMoons(width, height, numBodies, numMoons, df)
 	} else {
 		fmt.Printf("MODE %v is not valid\n", mode)
 		fmt.Print(usage())
