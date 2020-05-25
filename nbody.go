@@ -187,7 +187,7 @@ func solarSystem(w, h int) *World {
 	world.bodies[3] = body.NewBody("Mars", 0, -206.62e9, 3_389_500, 0.64171e24, 26.50e3, 0.0)
 	earth := body.NewBody("Earth", -147.09e9, 0, 6_371_000, 5.9724e24, 0.0, -30.29e3)
 	world.bodies[4] = earth
-	luna := body.NewBody("Luna", earth.Pos.X - 0.3633e9, 0, 1_737_400, 0.07346e24, 0.0, earth.Vel.Y - 1.082e3)
+	luna := body.NewBody("Luna", earth.Pos.X-0.3633e9, 0, 1_737_400, 0.07346e24, 0.0, earth.Vel.Y-1.082e3)
 	world.bodies[5] = luna
 
 	for _, body := range world.bodies {
@@ -204,7 +204,7 @@ func randomWithMoons(w, h, n, m int) *World {
 		spt:     1,
 		running: true,
 		elapsed: 0,
-		bodies:  make([]*body.Body, n * m + n + 1),
+		bodies:  make([]*body.Body, n*m+n+1),
 		width:   w,
 		height:  h,
 	}
@@ -222,13 +222,13 @@ func randomWithMoons(w, h, n, m int) *World {
 		vel := vector.Vector{un.X, un.Y, un.Z}
 		vel.MultScalar(circularOrbitVel)
 		mass := math_rand.Float64() * 1e26
-		radius := float64(8 + math_rand.Intn(8)) * world.mpp
+		radius := float64(8+math_rand.Intn(8)) * world.mpp
 		world.bodies[bi] = body.NewBody(fmt.Sprintf("P%v", i), pos.X, pos.Y, radius, mass, vel.X, vel.Y)
 		fmt.Printf("%v\n", world.bodies[bi])
 		bi += 1
 		for j := 0; j < m; j++ {
 			//moon
-			d := radius + float64(10 + math_rand.Intn(40)) * world.mpp
+			d := radius + float64(10+math_rand.Intn(40))*world.mpp
 			// moon vel
 			moonOrbVel := math.Sqrt(G * mass / d)
 			var sign float64
@@ -242,8 +242,8 @@ func randomWithMoons(w, h, n, m int) *World {
 			mu.MultScalar(moonOrbVel)
 			mv.Add(mu)
 			mm := 1e5 * math_rand.Float64()
-			mr := float64(1 + math_rand.Intn(4)) * world.mpp
-			world.bodies[bi] = body.NewBody(fmt.Sprintf("P%vM%v", i, j), pos.X - sign * d, pos.Y, mr, mm, mv.X, mv.Y)
+			mr := float64(1+math_rand.Intn(4)) * world.mpp
+			world.bodies[bi] = body.NewBody(fmt.Sprintf("P%vM%v", i, j), pos.X-sign*d, pos.Y, mr, mm, mv.X, mv.Y)
 			fmt.Printf("%v\n", world.bodies[bi])
 			bi += 1
 		}
@@ -302,7 +302,7 @@ Arguments:
 Options:
   -h --help
 	-d=<dimensions>, --dimensions=<dimensions>  dimensions of screen in pixels [default: 1024x1024]
-	-s=<spt>  Seconds of world time to calculate per UI tick [default: 1]
+	-s=<spt>  Seconds of world time to calculate per UI tick
 	-p=<pf>   Perturbation factor for random world generation [default: 0.2]
 	-r=<df>   Distance factor for random world generation [default: 1.0]
 	-n=<numBodies>, --number=<numBodies>  Number of bodies to start [default: 60]
@@ -315,8 +315,8 @@ func run() {
 	if opterr != nil {
 		panic(opterr)
 	}
-  dims, _ := options.String("--dimensions")
-	width, height := func () (int, int) {
+	dims, _ := options.String("--dimensions")
+	width, height := func() (int, int) {
 		elems := strings.Split(dims, "x")
 		w, _ := strconv.Atoi(elems[0])
 		h, _ := strconv.Atoi(elems[1])
@@ -327,6 +327,9 @@ func run() {
 	pf, _ := options.Float64("-p")
 	df, _ := options.Float64("-r")
 	mode, _ := options.String("MODE")
+	spt, _ := options.Int("-s")
+
+	fmt.Printf("SPT: %v\n", spt)
 
 	initRand()
 
@@ -337,7 +340,7 @@ func run() {
 		world = solarSystem(width, height)
 	} else if mode == "moons" {
 		totalBodies := numBodies
-		for (numBodies * numMoons + numBodies) > totalBodies {
+		for (numBodies*numMoons + numBodies) > totalBodies {
 			numBodies -= 1
 		}
 		world = randomWithMoons(width, height, numBodies, numMoons)
@@ -346,6 +349,11 @@ func run() {
 		fmt.Print(usage())
 		os.Exit(2)
 	}
+
+	if spt > 0 {
+		world.spt = spt
+	}
+
 	cfg := pixelgl.WindowConfig{
 		Title:  "N-Body Problem",
 		Bounds: pixel.R(0, 0, float64(width), float64(height)),
@@ -387,7 +395,7 @@ func run() {
 		}
 	}
 
-  followBody := -1
+	followBody := -1
 	center := vector.Vector{win.Bounds().Center().X, win.Bounds().Center().Y, 0}
 	offset := center
 
@@ -424,7 +432,7 @@ func run() {
 		win.Clear(colornames.Black)
 		mat := pixel.IM
 
-    if followBody >= 0 && followBody < len(world.bodies) {
+		if followBody >= 0 && followBody < len(world.bodies) {
 			offset = vector.Vector{center.X, center.Y, center.Z}
 			offset.Sub(world.worldToScreen(&world.bodies[followBody].Pos))
 		}
