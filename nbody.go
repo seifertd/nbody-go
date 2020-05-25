@@ -380,8 +380,6 @@ func run() {
 		}
 	}
 
-	fmt.Printf("LOADED SPRITES: %v", sprites)
-
 	var world *World
 	if mode == "random" {
 		world = randomWorld(width, height, numBodies, pf, df)
