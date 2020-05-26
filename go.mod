@@ -1,4 +1,4 @@
-module dseifert.net/nbody
+module github.com/seifertd/nbody-go
 
 go 1.14
 

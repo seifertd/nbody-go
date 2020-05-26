@@ -5,8 +5,8 @@ import (
 )
 
 func TestBodyCollisions(t *testing.T) {
-	b1 := NewBody("b1", 0, 0, 10, 10, 0, 0)
-	b2 := NewBody("b2", 0, 0, 10, 5, 5, 5)
+	b1 := NewBody("b1", 0, 0, 10, 10, 0, 0, nil)
+	b2 := NewBody("b2", 0, 0, 10, 5, 5, 5, nil)
 	toDelete := b1.CollideWith(b2)
 	if toDelete != b2 {
 		t.Errorf("b2 should be absorbed by b1 in collision")
@@ -26,10 +26,10 @@ func TestBodyCollisions(t *testing.T) {
 }
 
 func TestBodyCollisionTesting(t *testing.T) {
-	b1 := NewBody("b1", 0, 0, 10, 20, 0, 0)
-	b2 := NewBody("b2", 100, 100, 10, 20, 0, 0)
-	b3 := NewBody("b3", 0, 15, 7, 20, 0, 0)
-	b4 := NewBody("b4", 0, 15, 5, 20, 0, 0)
+	b1 := NewBody("b1", 0, 0, 10, 20, 0, 0, nil)
+	b2 := NewBody("b2", 100, 100, 10, 20, 0, 0, nil)
+	b3 := NewBody("b3", 0, 15, 7, 20, 0, 0, nil)
+	b4 := NewBody("b4", 0, 15, 5, 20, 0, 0, nil)
 
 	if b1.Collides(b2) {
 		t.Errorf("b1 and b2 should not be colliding")
