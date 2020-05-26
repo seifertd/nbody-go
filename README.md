@@ -5,7 +5,7 @@ Implementation of N-Body problem in Golang, usage below.
 
 1. Simulate large central body and 50 bodies in circular orbits:
 ```bash
-$ ./nbody random -n 50 -p 0.0 -r 1.0 -d 768x768
+$ ./nbody-go random -n 50 -p 0.0 -r 1.0 -d 768x768
 ```
 
 The initial circular orbits can be perturbed from perfectly circular by 
@@ -20,14 +20,14 @@ of the bodies out more.
 
    This will create 3 planetoids, each with 2 moonlets for 15 bodies total:
 ```bash
-$ ./nbody moons -n 15 -m 2 -r 1.2 -d 768x768
+$ ./nbody-go moons -n 15 -m 2 -r 1.2 -d 768x768
 ```
 
 The -r flag can be used to stretch out the distance from center of the bodies.
 
 3. Simulate the inner solar system
 ```bash
-$ ./nbody solar
+$ ./nbody-go solar
 ```
 
 This mode does not take any other flags.
@@ -42,7 +42,7 @@ This mode does not take any other flags.
 
 ## Usage
 
-    Usage: nbody [-hP -d<dimensions> -s=<spt> -p=<pf> -r=<df> -n=<numBodies> -m=<numMoons] MODE
+    Usage: nbody-go [-hP -d<dimensions> -s=<spt> -p=<pf> -r=<df> -n=<numBodies> -m=<numMoons] MODE
     Run N-Body simulation in mode MODE
     Arguments:
       MODE        mode of the simulation, one of random, moons, solar

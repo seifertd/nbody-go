@@ -323,7 +323,7 @@ func randomWorld(w, h, n int, pf float64, df float64) *World {
 }
 
 func usage() string {
-	return `Usage: nbody [-hP -d<dimensions> -s=<spt> -p=<pf> -r=<df> -n=<numBodies> -m=<numMoons] MODE
+	return `Usage: nbody-go [-hP -d<dimensions> -s=<spt> -p=<pf> -r=<df> -n=<numBodies> -m=<numMoons] MODE
 Run N-Body simulation in mode MODE
 Arguments:
   MODE        mode of the simulation, one of random, moons, solar
