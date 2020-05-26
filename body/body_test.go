@@ -6,7 +6,8 @@ import (
 
 func TestBodyCollisions(t *testing.T) {
 	b1 := NewBody("b1", 0, 0, 10, 10, 0, 0, nil)
-	b2 := NewBody("b2", 0, 0, 10, 5, 5, 5, nil)
+	b2 := NewBody("b2", 0, 0, 5, 5, 5, 5, nil)
+	oldRadius := b1.Radius
 	toDelete := b1.CollideWith(b2)
 	if toDelete != b2 {
 		t.Errorf("b2 should be absorbed by b1 in collision")
@@ -22,6 +23,9 @@ func TestBodyCollisions(t *testing.T) {
 	}
 	if b1.Name != "b1<-b2" {
 		t.Errorf("b2's name should incorporate b1: %v", b1.Name)
+	}
+	if b1.Radius <= oldRadius {
+		t.Errorf("b1's radius should increase %v < %v", oldRadius, b1.Radius)
 	}
 }
 

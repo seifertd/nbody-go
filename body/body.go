@@ -63,7 +63,7 @@ func (b Body) Collides(other *Body) bool {
 
 func (b *Body) CollideWith(other *Body) *Body {
 	var biggest, smallest *Body
-	if b.Mass > other.Mass {
+	if b.Radius > other.Radius {
 		biggest = b
 		smallest = other
 	} else {
