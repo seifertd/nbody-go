@@ -1,25 +1,24 @@
 package body
 
 import (
-	"dseifert.net/nbody/vector"
-	"github.com/faiface/pixel"
 	"fmt"
+	"github.com/faiface/pixel"
+	"github.com/seifertd/nbody-go/vector"
 	"math"
 )
 
 const G = 6.674e-11
 
-
 type Body struct {
-	Id     string
-	Name   string
-	Pos    vector.Vector
-	Vel    vector.Vector
-	Acc    vector.Vector
-	Radius float64
-	Mass   float64
+	Id      string
+	Name    string
+	Pos     vector.Vector
+	Vel     vector.Vector
+	Acc     vector.Vector
+	Radius  float64
+	Mass    float64
 	AccChan chan vector.Vector
-	Sprite *pixel.Sprite
+	Sprite  *pixel.Sprite
 }
 
 func NewBody(name string, x float64, y float64, r float64, m float64,
@@ -29,8 +28,8 @@ func NewBody(name string, x float64, y float64, r float64, m float64,
 }
 func NewBodyVector(name string, pos vector.Vector, vel vector.Vector,
 	r float64, m float64, s *pixel.Sprite) *Body {
-		return &Body{name, name, pos, vel, vector.New2DVector(0, 0),
-			r, m, make(chan vector.Vector), s}
+	return &Body{name, name, pos, vel, vector.New2DVector(0, 0),
+		r, m, make(chan vector.Vector), s}
 }
 
 func (b Body) String() string {
@@ -51,7 +50,6 @@ func (b *Body) CalculateAcceleration(others []*Body) {
 	}
 	b.AccChan <- deltaA
 }
-
 
 func (b Body) Collides(other *Body) bool {
 	if &b == other {

@@ -2,14 +2,14 @@ package main
 
 import (
 	crypto_rand "crypto/rand"
-	"dseifert.net/nbody/body"
-	"dseifert.net/nbody/vector"
 	"encoding/binary"
 	"fmt"
 	"github.com/docopt/docopt-go"
 	"github.com/faiface/pixel"
 	"github.com/faiface/pixel/pixelgl"
 	"github.com/faiface/pixel/text"
+	"github.com/seifertd/nbody-go/body"
+	"github.com/seifertd/nbody-go/vector"
 	"golang.org/x/image/colornames"
 	"golang.org/x/image/font/basicfont"
 	"image"
@@ -50,9 +50,10 @@ func loadPicture(path string) (pixel.Picture, error) {
 }
 
 var (
-	sprites map[string]*pixel.Sprite
+	sprites          map[string]*pixel.Sprite
 	numPlanetSprites int
 )
+
 func loadSprite(name, path string) *pixel.Sprite {
 	if sprites == nil {
 		sprites = make(map[string]*pixel.Sprite)
@@ -72,8 +73,8 @@ func loadSprite(name, path string) *pixel.Sprite {
 }
 
 func randomPlanetSprite() *pixel.Sprite {
-   name := fmt.Sprintf("planet%v", math_rand.Intn(numPlanetSprites))
-	 return sprites[name]
+	name := fmt.Sprintf("planet%v", math_rand.Intn(numPlanetSprites))
+	return sprites[name]
 }
 
 type World struct {
