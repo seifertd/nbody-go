@@ -1,6 +1,11 @@
 # nbody-go
 Implementation of N-Body problem in Golang, usage below.
 
+## Building & Running
+1. git clone https://github.com/seifertd/nbody-go.git
+2. go build
+3. ./nbody-go random
+
 ## Examples
 
 1. Simulate large central body and 50 bodies in circular orbits:
@@ -38,7 +43,7 @@ This mode does not take any other flags.
 * Press the `K` key to slow the simulation down (decreases seconds of world time per UI tick)
 * Press the `N` key repeatedly to cycle through the bodies and center them on the screen
 * Press the `C` key to re-center the display
-* Use scroll wheel of 2-finger swipe to zoom in and out.
+* Use scroll wheel or 2-finger swipe to zoom in and out.
 
 ## Usage
 
