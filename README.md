@@ -23,7 +23,7 @@ of the bodies out more.
    The sim will create enough planetoids to ensure the total number of planetoids and
    moonlets created is less than the value of the -n flag.
 
-   This will create 3 planetoids, each with 2 moonlets for 15 bodies total:
+   This will create 5 planetoids, each with 2 moonlets for 15 bodies total:
 ```bash
 $ ./nbody-go moons -n 15 -m 2 -r 1.2 -d 768x768
 ```
