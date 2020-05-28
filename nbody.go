@@ -24,7 +24,7 @@ import (
 
 const (
 	G         = 6.674e-11
-	MinRadius = 3.0
+	MinRadius = 4.0
 )
 
 func initRand() {
@@ -238,6 +238,7 @@ func randomWithMoons(w, h, n, m int, df float64) *World {
 	}
 	world.bodies[0] = body.NewBody("Mother", 0, 0, 30*world.mpp, 5e28, 0, 0, sprites["sun"])
 	center := world.bodies[0]
+	fmt.Printf("%v\n", center)
 	maxDistance := math.Sqrt(float64(iPow(world.width, 2)+iPow(world.height, 2))) * 2.0
 	bi := 1
 	for i := 0; i < n; i++ {
@@ -260,7 +261,7 @@ func randomWithMoons(w, h, n, m int, df float64) *World {
 			// moon vel
 			moonOrbVel := math.Sqrt(G * mass / d)
 			var sign float64
-			if j == 1 {
+			if math_rand.Intn(2) == 1 {
 				sign = 1
 			} else {
 				sign = -1
