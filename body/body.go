@@ -46,7 +46,7 @@ func (b *Body) CalculateAcceleration(others []*Body) {
 		}
 		d := math.Sqrt(math.Pow(b.Pos.X-body2.Pos.X, 2) + math.Pow(b.Pos.Y-body2.Pos.Y, 2))
 		acc := vector.New2DVector((body2.Pos.X-b.Pos.X)/d, (body2.Pos.Y-b.Pos.Y)/d)
-		acc.MultScalar(G * body2.Mass / (d * d)) // TODO: fix to include b.Mass
+		acc.MultScalar(G * body2.Mass / (d * d))
 		deltaA.Add(acc)
 	}
 	b.AccChan <- deltaA
@@ -62,24 +62,16 @@ func (b Body) Collides(other *Body) bool {
 	return dx*dx+dy*dy-r2*r2 <= 0
 }
 
-func (b *Body) CollideWith(other *Body) *Body {
-	var biggest, smallest *Body
-	if b.Radius >= other.Radius {
-		biggest = b
-		smallest = other
-	} else {
-		biggest = other
-		smallest = b
-	}
-	nr := math.Pow(math.Pow(biggest.Radius, 3)+math.Pow(smallest.Radius, 3), 1.0/3.0)
-	vnx := (biggest.Mass*biggest.Vel.X + smallest.Mass*smallest.Vel.X) /
-		(biggest.Mass + smallest.Mass)
-	vny := (biggest.Mass*biggest.Vel.Y + smallest.Mass*smallest.Vel.Y) /
-		(biggest.Mass + smallest.Mass)
-	biggest.Radius = nr
-	biggest.Mass += smallest.Mass
-	biggest.Vel.X = vnx
-	biggest.Vel.Y = vny
-	biggest.Name = fmt.Sprintf("%v<-%v", biggest.Name, smallest.Name)
-	return smallest
+func (b *Body) CollideWith(other *Body) {
+	// Assume other is going away
+	nr := math.Pow(math.Pow(b.Radius, 3)+math.Pow(other.Radius, 3), 1.0/3.0)
+	vnx := (b.Mass*b.Vel.X + other.Mass*other.Vel.X) /
+		(b.Mass + other.Mass)
+	vny := (b.Mass*b.Vel.Y + other.Mass*other.Vel.Y) /
+		(b.Mass + other.Mass)
+	b.Radius = nr
+	b.Mass += other.Mass
+	b.Vel.X = vnx
+	b.Vel.Y = vny
+	b.Name = fmt.Sprintf("%v<-%v", b.Name, other.Name)
 }
