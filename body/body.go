@@ -33,6 +33,7 @@ func NewBodyVector(name string, pos vector.Vector, vel vector.Vector,
 }
 
 func (b Body) String() string {
+	//return b.Name
 	return fmt.Sprintf("BODY: %v: m:%v vel:%v,%v pos:%v,%v r:%v",
 		b.Name, b.Mass, b.Vel.X, b.Vel.Y, b.Pos.X, b.Pos.Y, b.Radius)
 }
@@ -63,7 +64,7 @@ func (b Body) Collides(other *Body) bool {
 
 func (b *Body) CollideWith(other *Body) *Body {
 	var biggest, smallest *Body
-	if b.Radius > other.Radius {
+	if b.Radius >= other.Radius {
 		biggest = b
 		smallest = other
 	} else {

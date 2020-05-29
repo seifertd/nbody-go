@@ -88,11 +88,6 @@ type World struct {
 	height  int
 }
 
-type BodyPair struct {
-	body1 *body.Body
-	body2 *body.Body
-}
-
 func (w World) worldToScreen(coords *vector.Vector) vector.Vector {
 	return vector.Vector{coords.X / w.mpp * w.scale, coords.Y / w.mpp * w.scale, 0}
 }
@@ -129,54 +124,70 @@ func (w *World) tick() {
 			go body.CalculateAcceleration(w.bodies)
 		}
 
-		// Integrate and check for collisions
-		var colliding []*BodyPair
-		alreadyColliding := func(body1, body2 *body.Body) bool {
-			for i := 0; i < len(colliding); i++ {
-				pair := colliding[i]
-				if (pair.body1 == body1 && pair.body2 == body2) ||
-					(pair.body2 == body1 && pair.body1 == body2) {
-					return true
+		var colliding []map[*body.Body]bool
+		addCollision := func(body1, body2 *body.Body) {
+			//fmt.Printf("CRASH! %v AND %v\n", body1.Name, body2.Name)
+			added := false
+			for _, groups := range colliding {
+			  if _, ok := groups[body1]; ok {
+					groups[body2] = true
+					added = true
+				}
+				if _, ok := groups[body2]; ok {
+					groups[body1] = true
+					added = true
 				}
 			}
-			return false
+			if !added {
+				newmap := make(map[*body.Body]bool)
+				newmap[body1] = true
+				newmap[body2] = true
+				colliding = append(colliding, newmap)
+			}
 		}
 
 		for _, body := range w.bodies {
 			deltaA := <-body.AccChan
-			body.Acc.X = deltaA.X
-			body.Acc.Y = deltaA.Y
+			if !math.IsNaN(deltaA.X) && !math.IsNaN(deltaA.Y) {
+				// this happens if bodies start out on top of each other
+				body.Acc.X = deltaA.X
+				body.Acc.Y = deltaA.Y
+			}
 			body.Vel.Add(body.Acc)
 			body.Pos.Add(body.Vel)
 			for _, body2 := range w.bodies {
 				if body == body2 {
 					continue
 				}
-				if body.Collides(body2) && !alreadyColliding(body, body2) {
-					colliding = append(colliding, &BodyPair{body, body2})
+				if body.Collides(body2) {
+					addCollision(body, body2)
 				}
 			}
 		}
-		for _, pair := range colliding {
-			var keeping *body.Body
-			deleting := pair.body1.CollideWith(pair.body2)
-			if deleting == pair.body1 {
-				keeping = pair.body2
-			} else {
-				keeping = pair.body1
+		for _, group := range colliding {
+			var big *body.Body
+			for b, _ := range group {
+			   if big == nil || b.Radius > big.Radius {
+					 big = b
+				 }
 			}
-			fmt.Printf("%v: COLLISION: %v\n", w.worldTime(), keeping)
-			newBodies := w.bodies[:0]
-			for _, x := range w.bodies {
-				if x != deleting {
-					newBodies = append(newBodies, x)
+			for small, _ := range group {
+				if small != big {
+					big.CollideWith(small)
+					fmt.Printf("%v: COLLISION: %v\n", w.worldTime(), big)
+					newBodies := w.bodies[:0]
+					for _, x := range w.bodies {
+						if x != small {
+							newBodies = append(newBodies, x)
+						}
+					}
+					// Clean up remaining
+					for i := len(newBodies); i < len(w.bodies); i++ {
+						w.bodies[i] = nil
+					}
+					w.bodies = newBodies
 				}
 			}
-			// Clean up remaining
-			for i := len(newBodies); i < len(w.bodies); i++ {
-				w.bodies[i] = nil
-			}
-			w.bodies = newBodies
 		}
 	}
 }
@@ -461,6 +472,10 @@ func run() {
 		if followBody >= 0 && followBody < len(world.bodies) {
 			offset = vector.Vector{center.X, center.Y, center.Z}
 			offset.Sub(world.worldToScreen(&world.bodies[followBody].Pos))
+		}
+		if len(world.bodies) <= 0 {
+			fmt.Println("There are no more bodies, ending sim...")
+			os.Exit(3)
 		}
 		for _, body := range world.bodies {
 			sprite := body.Sprite

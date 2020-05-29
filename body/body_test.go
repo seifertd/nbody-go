@@ -8,10 +8,7 @@ func TestBodyCollisions(t *testing.T) {
 	b1 := NewBody("b1", 0, 0, 10, 10, 0, 0, nil)
 	b2 := NewBody("b2", 0, 0, 5, 5, 5, 5, nil)
 	oldRadius := b1.Radius
-	toDelete := b1.CollideWith(b2)
-	if toDelete != b2 {
-		t.Errorf("b2 should be absorbed by b1 in collision")
-	}
+	b1.CollideWith(b2)
 	if b1.Mass != 15 {
 		t.Errorf("b2 should absorb b1's mass: %v", b1.Mass)
 	}
