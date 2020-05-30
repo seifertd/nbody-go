@@ -52,6 +52,7 @@ func loadPicture(path string) (pixel.Picture, error) {
 var (
 	sprites          map[string]*pixel.Sprite
 	numPlanetSprites int
+	circleMode			 bool
 )
 
 func loadSprite(name, path string) *pixel.Sprite {
@@ -73,8 +74,16 @@ func loadSprite(name, path string) *pixel.Sprite {
 }
 
 func randomPlanetSprite() *pixel.Sprite {
-	name := fmt.Sprintf("planet%v", math_rand.Intn(numPlanetSprites))
-	return sprites[name]
+	if circleMode {
+		return sprites["circle"]
+	}
+	i := math_rand.Intn(numPlanetSprites + 1) // include an extra for Earth
+	if i == numPlanetSprites {
+		return sprites["earth"]
+	} else {
+		name := fmt.Sprintf("planet%v", math_rand.Intn(numPlanetSprites))
+		return sprites[name]
+	}
 }
 
 type World struct {
@@ -129,7 +138,7 @@ func (w *World) tick() {
 			//fmt.Printf("CRASH! %v AND %v\n", body1.Name, body2.Name)
 			added := false
 			for _, groups := range colliding {
-			  if _, ok := groups[body1]; ok {
+				if _, ok := groups[body1]; ok {
 					groups[body2] = true
 					added = true
 				}
@@ -167,9 +176,9 @@ func (w *World) tick() {
 		for _, group := range colliding {
 			var big *body.Body
 			for b, _ := range group {
-			   if big == nil || b.Radius > big.Radius {
-					 big = b
-				 }
+				if big == nil || b.Radius > big.Radius {
+					big = b
+				}
 			}
 			for small, _ := range group {
 				if small != big {
@@ -335,7 +344,8 @@ func randomWorld(w, h, n int, pf float64, df float64) *World {
 }
 
 func usage() string {
-	return `Usage: nbody-go [-hP -d<dimensions> -s=<spt> -p=<pf> -r=<df> -n=<numBodies> -m=<numMoons] MODE
+	return `Usage:
+	nbody-go [-hPC -d<dimensions> -s=<spt> -p=<pf> -r=<df> -n=<numBodies> -m=<numMoons] MODE
 Run N-Body simulation in mode MODE
 Arguments:
   MODE        mode of the simulation, one of random, moons, solar
@@ -343,6 +353,7 @@ Options:
   -h --help
 	-d=<dimensions>, --dimensions=<dimensions>  dimensions of screen in pixels [default: 1024x1024]
 	-P        Start paused
+	-C        Use plain white circle as planet graphic instead of random ones in moons and random MODE
 	-s=<spt>  Seconds of world time to calculate per UI tick
 	-p=<pf>   Perturbation factor for random world generation [default: 0.2]
 	-r=<df>   Distance factor for random world generation [default: 1.0]
@@ -370,6 +381,7 @@ func run() {
 	mode, _ := options.String("MODE")
 	spt, _ := options.Int("-s")
 	paused, _ := options.Bool("-P")
+	circleMode, _ = options.Bool("-C")
 
 	initRand()
 
@@ -381,6 +393,7 @@ func run() {
 	loadSprite("mars", "./images/mars.png")
 	loadSprite("venus", "./images/venus.png")
 	loadSprite("mercury", "./images/mercury.png")
+	loadSprite("circle", "./images/circle.png")
 	planetPic, err := loadPicture("./images/planetsheet.png")
 	if err != nil {
 		panic(err)
