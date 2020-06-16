@@ -39,6 +39,7 @@ This mode does not take any other flags.
 
 ## While Sim is Running
 
+* Press Space to pause and unpause the simulation
 * Press the `I` key to speed up the simulation (increases seconds of world time per UI tick)
 * Press the `K` key to slow the simulation down (decreases seconds of world time per UI tick)
 * Press the `N` key repeatedly to cycle through the bodies and center them on the screen
