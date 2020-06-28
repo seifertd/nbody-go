@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/docopt/docopt-go"
 	"github.com/faiface/pixel"
+	"github.com/faiface/pixel/imdraw"
 	"github.com/faiface/pixel/pixelgl"
 	"github.com/faiface/pixel/text"
 	"github.com/seifertd/nbody-go/body"
@@ -52,7 +53,7 @@ func loadPicture(path string) (pixel.Picture, error) {
 var (
 	sprites          map[string]*pixel.Sprite
 	numPlanetSprites int
-	circleMode			 bool
+	circleMode       bool
 )
 
 func loadSprite(name, path string) *pixel.Sprite {
@@ -350,7 +351,7 @@ Run N-Body simulation in mode MODE
 Arguments:
   MODE        mode of the simulation, one of random, moons, solar
 Options:
-  -h --help
+	-h --help
 	-d=<dimensions>, --dimensions=<dimensions>  dimensions of screen in pixels [default: 1024x1024]
 	-P        Start paused
 	-C        Use plain white circle as planet graphic instead of random ones in moons and random MODE
@@ -448,12 +449,16 @@ func run() {
 	followBody := -1
 	center := vector.Vector{win.Bounds().Center().X, win.Bounds().Center().Y, 0}
 	offset := center
+	var closest *body.Body
 
 	for !win.Closed() {
 
+		// toggle running flag
 		if win.JustPressed(pixelgl.KeySpace) {
 			world.running = !world.running
 		}
+
+		// switch center from body to body
 		if win.JustPressed(pixelgl.KeyN) {
 			if followBody == -1 {
 				followBody = 1
@@ -464,10 +469,41 @@ func run() {
 				}
 			}
 		}
+
+		// Recenter
 		if win.JustPressed(pixelgl.KeyC) {
 			followBody = -1
 			offset = center
 		}
+
+    // Turn off closest vec, accel and info display
+		if win.JustPressed(pixelgl.MouseButtonRight) {
+		  closest = nil
+		}
+
+		// Get details on a body
+		if win.JustPressed(pixelgl.MouseButtonLeft) {
+			closest = nil
+			mouseCoords := win.MousePosition()
+			mouseCoordsVec := vector.Vector{mouseCoords.X, mouseCoords.Y, 0}
+			var closestDistance float64 = 0.0
+			for _, body := range world.bodies {
+				bodyScreen := world.worldToScreen(&body.Pos)
+				bodyScreen.Add(offset)
+				if closest == nil {
+					closest = body
+					closestDistance = bodyScreen.DistanceTo(mouseCoordsVec)
+				} else {
+					bodyDistance := bodyScreen.DistanceTo(mouseCoordsVec)
+					if bodyDistance < closestDistance {
+						closestDistance = bodyDistance
+						closest = body
+					}
+				}
+			}
+		}
+
+		// Speed sim up or down
 		if win.Pressed(pixelgl.KeyI) {
 			world.spt += 1
 		}
@@ -477,7 +513,7 @@ func run() {
 				world.spt = 1
 			}
 		}
-		// zoom
+		// zoom in/out
 		world.scale *= math.Pow(1.2, win.MouseScroll().Y)
 		win.Clear(colornames.Black)
 		mat := pixel.IM
@@ -512,7 +548,34 @@ func run() {
 		fmt.Fprintf(infoTxt, "N: %v\n", len(world.bodies))
 		fmt.Fprintf(infoTxt, "t: %v\n", world.worldTime())
 		fmt.Fprintf(infoTxt, "S: %4.2f\n", world.scale)
-		fmt.Fprintf(infoTxt, "dt: %v", world.spt)
+		fmt.Fprintf(infoTxt, "dt: %v\n", world.spt)
+		// Add on clicked body info
+		if closest != nil {
+			// Add Vel and Acc vectors
+			closestPos := world.worldToScreen(&closest.Pos)
+			closestPos.Add(offset)
+			imd := imdraw.New(nil)
+			imd.Color = colornames.Red
+		  imd.EndShape = imdraw.SharpEndShape
+			// velocity
+			vel := vector.MultScalar(closest.Vel.Unit(), 40)
+			endVel := vector.Add(closestPos, vel)
+			imd.Push(pixel.V(closestPos.X, closestPos.Y), pixel.V(endVel.X, endVel.Y))
+			imd.Line(2)
+			imd.Draw(win)
+			// acceleration
+			imd.Color = colornames.Green
+			acc := vector.MultScalar(closest.Acc.Unit(), 40)
+			endAcc := vector.Add(closestPos, acc)
+			imd.Push(pixel.V(closestPos.X, closestPos.Y), pixel.V(endAcc.X, endAcc.Y))
+			imd.Line(2)
+			imd.Draw(win)
+
+			fmt.Fprintf(infoTxt, "\n%v:\n", closest.Name)
+			fmt.Fprintf(infoTxt, "P: (%5.2e,%5.2e)\n", closest.Pos.X, closest.Pos.Y)
+			fmt.Fprintf(infoTxt, "V: (%5.2e,%5.2e)\n", closest.Vel.X, closest.Vel.Y)
+			fmt.Fprintf(infoTxt, "A: (%5.2e,%5.2e)\n", closest.Acc.X, closest.Acc.Y)
+		}
 		infoTxt.Draw(win, pixel.IM)
 		win.Update()
 		world.tick()

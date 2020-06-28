@@ -44,6 +44,10 @@ func (v *Vector) Add(other Vector) {
 	v.Y += other.Y
 	v.Z += other.Z
 }
+func (v Vector) DistanceTo(other Vector) float64 {
+	a := Sub(v, other)
+	return a.Magnitude()
+}
 func (v *Vector) Sub(other Vector) {
 	v.X -= other.X
 	v.Y -= other.Y

@@ -39,11 +39,19 @@ This mode does not take any other flags.
 
 ## While Sim is Running
 
+A info display of total number of bodies in the simulation, elapsed world time, zoom and seconds per
+tick is shown in the upper right of the window.
+
 * Press the `I` key to speed up the simulation (increases seconds of world time per UI tick)
 * Press the `K` key to slow the simulation down (decreases seconds of world time per UI tick)
 * Press the `N` key repeatedly to cycle through the bodies and center them on the screen
 * Press the `C` key to re-center the display
 * Use scroll wheel or 2-finger swipe to zoom in and out.
+* Press the left mouse button to select a body and show the following:
+  * The body's name, velocity and acceleration in the info display
+  * A green velocity direction vector.
+  * A red acceleration direction vector
+* Press the right mouse button to turn off the closest body display
 
 ## Usage
 
