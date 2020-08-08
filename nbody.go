@@ -113,7 +113,7 @@ func (w World) worldTime() string {
 func (w World) escaped(body *body.Body) bool {
 	sun := w.bodies[0]
 	radius := body.Pos.DistanceTo(sun.Pos)
-	maxDistance := math.Sqrt(float64(iPow(w.width, 2)+iPow(w.height, 2))) * 6.0 * w.mpp
+	maxDistance := math.Sqrt(float64(iPow(w.width, 2)+iPow(w.height, 2))) * 10.0 * w.mpp
 
 	return radius > maxDistance && body.Vel.Magnitude() > math.Sqrt(2.0 * G * sun.Mass / radius)
 }
