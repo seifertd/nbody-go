@@ -110,6 +110,14 @@ func (w World) worldTime() string {
 	return fmt.Sprintf("%dd %02dh%02dm%02ds", d, h, m, s)
 }
 
+func (w World) escaped(body *body.Body) bool {
+	sun := w.bodies[0]
+	radius := body.Pos.DistanceTo(sun.Pos)
+	maxDistance := math.Sqrt(float64(iPow(w.width, 2)+iPow(w.height, 2))) * 6.0 * w.mpp
+
+	return radius > maxDistance && body.Vel.Magnitude() > math.Sqrt(2.0 * G * sun.Mass / radius)
+}
+
 func (w *World) calculateAcceleration(body *body.Body, c chan vector.Vector) {
 	deltaA := vector.Vector{0, 0, 0}
 	for _, body2 := range w.bodies {
@@ -124,6 +132,20 @@ func (w *World) calculateAcceleration(body *body.Body, c chan vector.Vector) {
 	c <- deltaA
 }
 
+func (w *World) removeBody(toRemove *body.Body) {
+	newBodies := w.bodies[:0]
+	for _, x := range w.bodies {
+		if x != toRemove {
+			newBodies = append(newBodies, x)
+		}
+	}
+	// Clean up remaining
+	for i := len(newBodies); i < len(w.bodies); i++ {
+		w.bodies[i] = nil
+	}
+	w.bodies = newBodies
+}
+
 func (w *World) tick() {
 	if !w.running {
 		return
@@ -134,6 +156,7 @@ func (w *World) tick() {
 			go body.CalculateAcceleration(w.bodies)
 		}
 
+    var escaping []*body.Body
 		var colliding []map[*body.Body]bool
 		addCollision := func(body1, body2 *body.Body) {
 			//fmt.Printf("CRASH! %v AND %v\n", body1.Name, body2.Name)
@@ -165,14 +188,25 @@ func (w *World) tick() {
 			}
 			body.Vel.Add(body.Acc)
 			body.Pos.Add(body.Vel)
-			for _, body2 := range w.bodies {
-				if body == body2 {
-					continue
-				}
-				if body.Collides(body2) {
-					addCollision(body, body2)
+
+			// Check if body is 1) higher than escape velocity and 2) is more more
+			// than 2X screens from center.
+			if w.escaped(body) {
+			  escaping = append(escaping, body)
+			} else {
+				for _, body2 := range w.bodies {
+					if body == body2 {
+						continue
+					}
+					if body.Collides(body2) {
+						addCollision(body, body2)
+					}
 				}
 			}
+		}
+		for _, escaper := range escaping {
+			fmt.Printf("%v: ESCAPED: %v\n", w.worldTime(), escaper)
+			w.removeBody(escaper)
 		}
 		for _, group := range colliding {
 			var big *body.Body
@@ -185,17 +219,7 @@ func (w *World) tick() {
 				if small != big {
 					big.CollideWith(small)
 					fmt.Printf("%v: COLLISION: %v\n", w.worldTime(), big)
-					newBodies := w.bodies[:0]
-					for _, x := range w.bodies {
-						if x != small {
-							newBodies = append(newBodies, x)
-						}
-					}
-					// Clean up remaining
-					for i := len(newBodies); i < len(w.bodies); i++ {
-						w.bodies[i] = nil
-					}
-					w.bodies = newBodies
+					w.removeBody(small)
 				}
 			}
 		}
