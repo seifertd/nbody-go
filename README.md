@@ -56,7 +56,7 @@ tick is shown in the upper right of the window.
 
 ## Usage
 
-	   nbody-go [-hPC -d<dimensions> -s=<spt> -p=<pf> -r=<df> -n=<numBodies> -m=<numMoons] MODE
+	   nbody-go [-hPC -d<dimensions> -s=<spt> -p=<pf> -r=<df> -M=<magFact> -n=<numBodies> -m=<numMoons] MODE
       Run N-Body simulation in mode MODE
       Arguments:
         MODE        mode of the simulation, one of random, moons, solar
@@ -68,5 +68,6 @@ tick is shown in the upper right of the window.
          -s=<spt>  Seconds of world time to calculate per UI tick
          -p=<pf>   Perturbation factor for random world generation [default: 0.2]
          -r=<df>   Distance factor for random world generation [default: 1.0]
+	 -M=<magFact> For high DPI screens, scale up window by this amount [default: 1.0]
          -n=<numBodies>, --number=<numBodies>  Number of bodies to start [default: 60]
          -m=<numMoons>, --moons=<numMoons>     Number of moons per body [default: 3]
