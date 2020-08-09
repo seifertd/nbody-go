@@ -96,10 +96,11 @@ type World struct {
 	bodies  []*body.Body
 	width   int
 	height  int
+	mag     float64
 }
 
 func (w World) worldToScreen(coords *vector.Vector) vector.Vector {
-	return vector.Vector{coords.X / w.mpp * w.scale, coords.Y / w.mpp * w.scale, 0}
+	return vector.Vector{coords.X / w.mpp * w.scale * w.mag, coords.Y / w.mpp * w.scale * w.mag, 0}
 }
 
 func (w World) worldTime() string {
@@ -113,7 +114,7 @@ func (w World) worldTime() string {
 func (w World) escaped(body *body.Body) bool {
 	sun := w.bodies[0]
 	radius := body.Pos.DistanceTo(sun.Pos)
-	maxDistance := math.Sqrt(float64(iPow(w.width, 2)+iPow(w.height, 2))) * 10.0 * w.mpp
+	maxDistance := math.Sqrt(float64(iPow(w.width, 2)+iPow(w.height, 2))) * 10.0 * w.mag * w.mpp
 
 	return radius > maxDistance && body.Vel.Magnitude() > math.Sqrt(2.0 * G * sun.Mass / radius)
 }
@@ -251,6 +252,7 @@ func solarSystem(w, h int) *World {
 		bodies:  make([]*body.Body, 6),
 		width:   w,
 		height:  h,
+		mag: 1.0,
 	}
 
 	world.bodies[0] = body.NewBody("Sol", 0, 0, 696_340_000, 1.9885e30, 0.0, 0.0, sprites["sun"])
@@ -280,6 +282,7 @@ func randomWithMoons(w, h, n, m int, df float64) *World {
 		bodies:  make([]*body.Body, n*m+n+1),
 		width:   w,
 		height:  h,
+		mag: 1.0,
 	}
 	world.bodies[0] = body.NewBody("Mother", 0, 0, 30*world.mpp, 5e28, 0, 0, sprites["sun"])
 	center := world.bodies[0]
@@ -335,6 +338,7 @@ func randomWorld(w, h, n int, pf float64, df float64) *World {
 		bodies:  make([]*body.Body, n+1),
 		width:   w,
 		height:  h,
+		mag: 1.0,
 	}
 	world.bodies[0] = body.NewBody("Mother", 0, 0, 30*world.mpp, 5e28, 0, 0, sprites["sun"])
 	fmt.Printf("%v\n", world.bodies[0])
@@ -370,7 +374,7 @@ func randomWorld(w, h, n int, pf float64, df float64) *World {
 
 func usage() string {
 	return `Usage:
-	nbody-go [-hPC -d<dimensions> -s=<spt> -p=<pf> -r=<df> -n=<numBodies> -m=<numMoons] MODE
+	nbody-go [-hPC -d<dimensions> -s=<spt> -p=<pf> -r=<df> -n=<numBodies> -m=<numMoons> -M=<magFact] MODE
 Run N-Body simulation in mode MODE
 Arguments:
   MODE        mode of the simulation, one of random, moons, solar
@@ -382,8 +386,9 @@ Options:
 	-s=<spt>  Seconds of world time to calculate per UI tick
 	-p=<pf>   Perturbation factor for random world generation [default: 0.2]
 	-r=<df>   Distance factor for random world generation [default: 1.0]
-	-n=<numBodies>, --number=<numBodies>  Number of bodies to start [default: 60]
-	-m=<numMoons>, --moons=<numMoons>     Number of moons per body [default: 3]
+	-M=<magFact> For high DPI screens, scale up window by this amount [default: 1.0]
+	-n=<numBodies>, --number=<numBodies>      Number of bodies to start [default: 60]
+	-m=<numMoons>, --moons=<numMoons>         Number of moons per body [default: 3]
 `
 }
 
@@ -407,6 +412,7 @@ func run() {
 	spt, _ := options.Int("-s")
 	paused, _ := options.Bool("-P")
 	circleMode, _ = options.Bool("-C")
+	magFact, _ := options.Float64("-M")
 
 	initRand()
 
@@ -448,6 +454,10 @@ func run() {
 		os.Exit(2)
 	}
 
+	fmt.Printf("MAG FACT: %v\n", magFact)
+
+	world.mag = magFact
+
 	if spt > 0 {
 		world.spt = spt
 	}
@@ -457,7 +467,7 @@ func run() {
 
 	cfg := pixelgl.WindowConfig{
 		Title:  "N-Body Problem",
-		Bounds: pixel.R(0, 0, float64(width), float64(height)),
+		Bounds: pixel.R(0, 0, float64(width) * world.mag, float64(height) * world.mag),
 		VSync:  true,
 	}
 
@@ -468,7 +478,7 @@ func run() {
 
 	// initialize font
 	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
-	infoTxt := text.New(pixel.V(win.Bounds().Max.X-200, win.Bounds().Max.Y-20), basicAtlas)
+	infoTxt := text.New(pixel.V(win.Bounds().Max.X-200*world.mag, win.Bounds().Max.Y-20*world.mag), basicAtlas)
 
 	followBody := -1
 	center := vector.Vector{win.Bounds().Center().X, win.Bounds().Center().Y, 0}
@@ -561,7 +571,7 @@ func run() {
 				brp = MinRadius
 			}
 			sf := brp / spriteSize
-			bodyMat := mat.ScaledXY(pixel.ZV, pixel.V(sf, sf))
+			bodyMat := mat.ScaledXY(pixel.ZV, pixel.V(sf * world.mag, sf * world.mag))
 			screenPos := world.worldToScreen(&body.Pos)
 			screenPos.Add(offset)
 			bodyMat = bodyMat.Moved(pixel.V(screenPos.X, screenPos.Y))
@@ -600,7 +610,7 @@ func run() {
 			fmt.Fprintf(infoTxt, "V: (%5.2e,%5.2e)\n", closest.Vel.X, closest.Vel.Y)
 			fmt.Fprintf(infoTxt, "A: (%5.2e,%5.2e)\n", closest.Acc.X, closest.Acc.Y)
 		}
-		infoTxt.Draw(win, pixel.IM)
+		infoTxt.Draw(win, pixel.IM.Scaled(infoTxt.Orig, world.mag))
 		win.Update()
 		world.tick()
 	}
