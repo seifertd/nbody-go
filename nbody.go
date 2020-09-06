@@ -374,7 +374,7 @@ func randomWorld(w, h, n int, pf float64, df float64) *World {
 
 func usage() string {
 	return `Usage:
-	nbody-go [-hPC -d<dimensions> -s=<spt> -p=<pf> -r=<df> -n=<numBodies> -m=<numMoons> -M=<magFact] MODE
+	nbody-go [-hPC -d<dimensions> -s=<spt> -p=<pf> -r=<df> -n=<numBodies> -m=<numMoons> -M=<mf>] MODE
 Run N-Body simulation in mode MODE
 Arguments:
   MODE        mode of the simulation, one of random, moons, solar
@@ -386,7 +386,7 @@ Options:
 	-s=<spt>  Seconds of world time to calculate per UI tick
 	-p=<pf>   Perturbation factor for random world generation [default: 0.2]
 	-r=<df>   Distance factor for random world generation [default: 1.0]
-	-M=<magFact> For high DPI screens, scale up window by this amount [default: 1.0]
+	-M=<mf>   For high DPI screens, scale up window by this amount [default: 1.0]
 	-n=<numBodies>, --number=<numBodies>      Number of bodies to start [default: 60]
 	-m=<numMoons>, --moons=<numMoons>         Number of moons per body [default: 3]
 `
@@ -412,7 +412,7 @@ func run() {
 	spt, _ := options.Int("-s")
 	paused, _ := options.Bool("-P")
 	circleMode, _ = options.Bool("-C")
-	magFact, _ := options.Float64("-M")
+	mf, _ := options.Float64("-M")
 
 	initRand()
 
@@ -454,9 +454,7 @@ func run() {
 		os.Exit(2)
 	}
 
-	fmt.Printf("MAG FACT: %v\n", magFact)
-
-	world.mag = magFact
+	world.mag = mf
 
 	if spt > 0 {
 		world.spt = spt
