@@ -2,9 +2,10 @@
 Implementation of N-Body problem in Golang, usage below.
 
 ## Building & Running
-1. git clone https://github.com/seifertd/nbody-go.git
-2. go build
-3. ./nbody-go random
+1.  git clone https://github.com/seifertd/nbody-go.git
+1.  [Install pre-requisites for faiface/pixel go 2D graphics library](https://github.com/faiface/pixel#requirements) -- I've run this on Mac OS X and Linux, tried to run it on a Raspberry Pi 4, but the library support is lacking.
+1.  go build
+1.  ./nbody-go -h
 
 ## Examples
 
@@ -37,17 +38,28 @@ $ ./nbody-go solar
 
 This mode does not take any other flags.
 
+### High DPI Screens
+
+On Linux Mint running on an old Mac Book Pro with a retina display, I found the GUI text was so small as to be hard to read. Provide `-M 2.0` or such to magnify the window by that much and make the text easier to read.
+
 ## While Sim is Running
 
 A info display of total number of bodies in the simulation, elapsed world time, zoom and seconds per
-tick is shown in the upper right of the window.
+tick is shown in the upper right of the window. As bodies collide, the sim attempts to preserve momentum.
+The body with in a colliding group with the largest radius is kept and absorbs the mass of the other bodies
+in the group, increasing radius to keep original density the same (dubious). The remaining body's momentum
+is set equal to the group's momentum at time of the collision and a message will be printed to the console
+giving details on the resulting body's parameters. If a body gets far enough away from the center and has
+reached escape velocity, it will be removed from the sim and a message so indicating is printed to the console.
+
+### Controls
 
 * Press Space to pause and unpause the simulation
 * Press the `I` key to speed up the simulation (increases seconds of world time per UI tick)
 * Press the `K` key to slow the simulation down (decreases seconds of world time per UI tick)
 * Press the `N` key repeatedly to cycle through the bodies and center them on the screen
 * Press the `C` key to re-center the display
-* Use scroll wheel or 2-finger swipe to zoom in and out.
+* Use mouse scroll wheel or 2-finger pinch to zoom in and out.
 * Press the left mouse button to select a body and show the following:
   * The body's name, velocity and acceleration in the info display
   * A green velocity direction vector.
@@ -56,18 +68,20 @@ tick is shown in the upper right of the window.
 
 ## Usage
 
-	   nbody-go [-hPC -d<dimensions> -s=<spt> -p=<pf> -r=<df> -M=<magFact> -n=<numBodies> -m=<numMoons] MODE
-      Run N-Body simulation in mode MODE
-      Arguments:
-        MODE        mode of the simulation, one of random, moons, solar
-      Options:
-        -h --help
-         -d=<dimensions>, --dimensions=<dimensions>  dimensions of screen in pixels [default: 1024x1024]
-         -P        Start paused
-         -C        Use plain white circle as planet graphic instead of random ones in moons and random MODE
-         -s=<spt>  Seconds of world time to calculate per UI tick
-         -p=<pf>   Perturbation factor for random world generation [default: 0.2]
-         -r=<df>   Distance factor for random world generation [default: 1.0]
-	 -M=<magFact> For high DPI screens, scale up window by this amount [default: 1.0]
-         -n=<numBodies>, --number=<numBodies>  Number of bodies to start [default: 60]
-         -m=<numMoons>, --moons=<numMoons>     Number of moons per body [default: 3]
+```
+> nbody-go [-hPC -d<dimensions> -s=<spt> -p=<pf> -r=<df> -n=<numBodies> -m=<numMoons> -M=<mf>] MODE
+Run N-Body simulation in mode MODE
+Arguments:
+  MODE        mode of the simulation, one of random, moons, solar
+Options:
+	-h --help
+	-d=<dimensions>, --dimensions=<dimensions>  dimensions of screen in pixels [default: 1024x1024]
+	-P        Start paused
+	-C        Use plain white circle as planet graphic instead of random ones in moons and random MODE
+	-s=<spt>  Seconds of world time to calculate per UI tick
+	-p=<pf>   Perturbation factor for random world generation [default: 0.2]
+	-r=<df>   Distance factor for random world generation [default: 1.0]
+	-M=<mf>   For high DPI screens, scale up window by this amount [default: 1.0]
+	-n=<numBodies>, --number=<numBodies>      Number of bodies to start [default: 60]
+	-m=<numMoons>, --moons=<numMoons>         Number of moons per body [default: 3]
+```
