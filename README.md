@@ -46,7 +46,7 @@ On Linux Mint running on an old Mac Book Pro with a retina display, I found the 
 
 A info display of total number of bodies in the simulation, elapsed world time, zoom and seconds per
 tick is shown in the upper right of the window. As bodies collide, the sim attempts to preserve momentum.
-The body with in a colliding group with the largest radius is kept and absorbs the mass of the other bodies
+The body in a colliding group with the largest radius is kept and absorbs the mass of the other bodies
 in the group, increasing radius to keep original density the same (dubious). The remaining body's momentum
 is set equal to the group's momentum at time of the collision and a message will be printed to the console
 giving details on the resulting body's parameters. If a body gets far enough away from the center and has
@@ -59,7 +59,7 @@ reached escape velocity, it will be removed from the sim and a message so indica
 * Press the `K` key to slow the simulation down (decreases seconds of world time per UI tick)
 * Press the `N` key repeatedly to cycle through the bodies and center them on the screen
 * Press the `C` key to re-center the display
-* Use mouse scroll wheel or 2-finger pinch to zoom in and out.
+* Use mouse scroll wheel or 2-finger drag to zoom in and out.
 * Press the left mouse button to select a body and show the following:
   * The body's name, velocity and acceleration in the info display
   * A green velocity direction vector.
