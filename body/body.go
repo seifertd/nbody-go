@@ -3,7 +3,7 @@ package body
 import (
 	"fmt"
 	"github.com/faiface/pixel"
-	"github.com/seifertd/nbody-go/vector"
+	"github.com/seifertd/go/vector"
 	"math"
 )
 

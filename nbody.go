@@ -9,8 +9,8 @@ import (
 	"github.com/faiface/pixel/imdraw"
 	"github.com/faiface/pixel/pixelgl"
 	"github.com/faiface/pixel/text"
+	"github.com/seifertd/go/vector"
 	"github.com/seifertd/nbody-go/body"
-	"github.com/seifertd/nbody-go/vector"
 	"golang.org/x/image/colornames"
 	"golang.org/x/image/font/basicfont"
 	"image"
@@ -116,7 +116,7 @@ func (w World) escaped(body *body.Body) bool {
 	radius := body.Pos.DistanceTo(sun.Pos)
 	maxDistance := math.Sqrt(float64(iPow(w.width, 2)+iPow(w.height, 2))) * 10.0 * w.mag * w.mpp
 
-	return radius > maxDistance && body.Vel.Magnitude() > math.Sqrt(2.0 * G * sun.Mass / radius)
+	return radius > maxDistance && body.Vel.Magnitude() > math.Sqrt(2.0*G*sun.Mass/radius)
 }
 
 func (w *World) calculateAcceleration(body *body.Body, c chan vector.Vector) {
@@ -157,7 +157,7 @@ func (w *World) tick() {
 			go body.CalculateAcceleration(w.bodies)
 		}
 
-    var escaping []*body.Body
+		var escaping []*body.Body
 		var colliding []map[*body.Body]bool
 		addCollision := func(body1, body2 *body.Body) {
 			//fmt.Printf("CRASH! %v AND %v\n", body1.Name, body2.Name)
@@ -193,7 +193,7 @@ func (w *World) tick() {
 			// Check if body is 1) higher than escape velocity and 2) is more more
 			// than 2X screens from center.
 			if w.escaped(body) {
-			  escaping = append(escaping, body)
+				escaping = append(escaping, body)
 			} else {
 				for _, body2 := range w.bodies {
 					if body == body2 {
@@ -252,7 +252,7 @@ func solarSystem(w, h int) *World {
 		bodies:  make([]*body.Body, 6),
 		width:   w,
 		height:  h,
-		mag: 1.0,
+		mag:     1.0,
 	}
 
 	world.bodies[0] = body.NewBody("Sol", 0, 0, 696_340_000, 1.9885e30, 0.0, 0.0, sprites["sun"])
@@ -282,7 +282,7 @@ func randomWithMoons(w, h, n, m int, df float64) *World {
 		bodies:  make([]*body.Body, n*m+n+1),
 		width:   w,
 		height:  h,
-		mag: 1.0,
+		mag:     1.0,
 	}
 	world.bodies[0] = body.NewBody("Mother", 0, 0, 30*world.mpp, 5e28, 0, 0, sprites["sun"])
 	center := world.bodies[0]
@@ -338,7 +338,7 @@ func randomWorld(w, h, n int, pf float64, df float64) *World {
 		bodies:  make([]*body.Body, n+1),
 		width:   w,
 		height:  h,
-		mag: 1.0,
+		mag:     1.0,
 	}
 	world.bodies[0] = body.NewBody("Mother", 0, 0, 30*world.mpp, 5e28, 0, 0, sprites["sun"])
 	fmt.Printf("%v\n", world.bodies[0])
@@ -465,7 +465,7 @@ func run() {
 
 	cfg := pixelgl.WindowConfig{
 		Title:  "N-Body Problem",
-		Bounds: pixel.R(0, 0, float64(width) * world.mag, float64(height) * world.mag),
+		Bounds: pixel.R(0, 0, float64(width)*world.mag, float64(height)*world.mag),
 		VSync:  true,
 	}
 
@@ -508,9 +508,9 @@ func run() {
 			offset = center
 		}
 
-    // Turn off closest vec, accel and info display
+		// Turn off closest vec, accel and info display
 		if win.JustPressed(pixelgl.MouseButtonRight) {
-		  closest = nil
+			closest = nil
 		}
 
 		// Get details on a body
@@ -569,7 +569,7 @@ func run() {
 				brp = MinRadius
 			}
 			sf := brp / spriteSize
-			bodyMat := mat.ScaledXY(pixel.ZV, pixel.V(sf * world.mag, sf * world.mag))
+			bodyMat := mat.ScaledXY(pixel.ZV, pixel.V(sf*world.mag, sf*world.mag))
 			screenPos := world.worldToScreen(&body.Pos)
 			screenPos.Add(offset)
 			bodyMat = bodyMat.Moved(pixel.V(screenPos.X, screenPos.Y))
@@ -588,7 +588,7 @@ func run() {
 			closestPos.Add(offset)
 			imd := imdraw.New(nil)
 			imd.Color = colornames.Red
-		  imd.EndShape = imdraw.SharpEndShape
+			imd.EndShape = imdraw.SharpEndShape
 			// velocity
 			vel := vector.MultScalar(closest.Vel.Unit(), 40)
 			endVel := vector.Add(closestPos, vel)
