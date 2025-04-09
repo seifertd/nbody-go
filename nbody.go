@@ -151,16 +151,103 @@ func (w *World) tick() {
 	if !w.running {
 		return
 	}
+
 	for i := 0; i < w.spt; i++ {
 		w.elapsed += 1
-		for _, body := range w.bodies {
-			go body.CalculateAcceleration(w.bodies)
+
+		// Store initial positions and velocities
+		initialPos := make([]vector.Vector, len(w.bodies))
+		initialVel := make([]vector.Vector, len(w.bodies))
+
+		// RK4 requires 4 sets of derivatives (k1, k2, k3, k4)
+		k1Vel := make([]vector.Vector, len(w.bodies))
+		k1Acc := make([]vector.Vector, len(w.bodies))
+		k2Vel := make([]vector.Vector, len(w.bodies))
+		k2Acc := make([]vector.Vector, len(w.bodies))
+		k3Vel := make([]vector.Vector, len(w.bodies))
+		k3Acc := make([]vector.Vector, len(w.bodies))
+		k4Vel := make([]vector.Vector, len(w.bodies))
+		k4Acc := make([]vector.Vector, len(w.bodies))
+
+		// Save initial state
+		for i, body := range w.bodies {
+			initialPos[i] = vector.Vector{body.Pos.X, body.Pos.Y, body.Pos.Z}
+			initialVel[i] = vector.Vector{body.Vel.X, body.Vel.Y, body.Vel.Z}
 		}
 
+		// Step 1: Calculate k1 (derivatives at the beginning of the interval)
+		w.calculateAllAccelerations(k1Acc)
+		for i, body := range w.bodies {
+			k1Vel[i] = vector.Vector{body.Vel.X, body.Vel.Y, body.Vel.Z}
+		}
+
+		// Step 2: Calculate k2 (derivatives at the midpoint using k1)
+		w.applyHalfStep(initialPos, initialVel, k1Vel, k1Acc)
+		w.calculateAllAccelerations(k2Acc)
+		for i, body := range w.bodies {
+			k2Vel[i] = vector.Vector{body.Vel.X, body.Vel.Y, body.Vel.Z}
+		}
+
+		// Step 3: Calculate k3 (derivatives at the midpoint using k2)
+		w.resetToInitial(initialPos, initialVel)
+		w.applyHalfStep(initialPos, initialVel, k2Vel, k2Acc)
+		w.calculateAllAccelerations(k3Acc)
+		for i, body := range w.bodies {
+			k3Vel[i] = vector.Vector{body.Vel.X, body.Vel.Y, body.Vel.Z}
+		}
+
+		// Step 4: Calculate k4 (derivatives at the end using k3)
+		w.resetToInitial(initialPos, initialVel)
+		w.applyFullStep(initialPos, initialVel, k3Vel, k3Acc)
+		w.calculateAllAccelerations(k4Acc)
+		for i, body := range w.bodies {
+			k4Vel[i] = vector.Vector{body.Vel.X, body.Vel.Y, body.Vel.Z}
+		}
+
+		// Apply the weighted sum to get final positions and velocities
+		w.resetToInitial(initialPos, initialVel)
+
+		for i, body := range w.bodies {
+			// Update velocity: v(t+dt) = v(t) + (1/6) * (k1 + 2*k2 + 2*k3 + k4)
+			velChange := vector.Vector{0, 0, 0}
+			velChange.Add(k1Acc[i])
+
+			temp := vector.Vector{k2Acc[i].X, k2Acc[i].Y, k2Acc[i].Z}
+			temp.MultScalar(2)
+			velChange.Add(temp)
+
+			temp = vector.Vector{k3Acc[i].X, k3Acc[i].Y, k3Acc[i].Z}
+			temp.MultScalar(2)
+			velChange.Add(temp)
+
+			velChange.Add(k4Acc[i])
+			velChange.MultScalar(1.0 / 6.0)
+
+			body.Vel.Add(velChange)
+
+			// Update position: x(t+dt) = x(t) + (1/6) * (k1 + 2*k2 + 2*k3 + k4)
+			posChange := vector.Vector{0, 0, 0}
+			posChange.Add(k1Vel[i])
+
+			temp = vector.Vector{k2Vel[i].X, k2Vel[i].Y, k2Vel[i].Z}
+			temp.MultScalar(2)
+			posChange.Add(temp)
+
+			temp = vector.Vector{k3Vel[i].X, k3Vel[i].Y, k3Vel[i].Z}
+			temp.MultScalar(2)
+			posChange.Add(temp)
+
+			posChange.Add(k4Vel[i])
+			posChange.MultScalar(1.0 / 6.0)
+
+			body.Pos.Add(posChange)
+		}
+
+		// Handle collisions and escapes
 		var escaping []*body.Body
 		var colliding []map[*body.Body]bool
+
 		addCollision := func(body1, body2 *body.Body) {
-			//fmt.Printf("CRASH! %v AND %v\n", body1.Name, body2.Name)
 			added := false
 			for _, groups := range colliding {
 				if _, ok := groups[body1]; ok {
@@ -181,15 +268,6 @@ func (w *World) tick() {
 		}
 
 		for _, body := range w.bodies {
-			deltaA := <-body.AccChan
-			if !math.IsNaN(deltaA.X) && !math.IsNaN(deltaA.Y) {
-				// this happens if bodies start out on top of each other
-				body.Acc.X = deltaA.X
-				body.Acc.Y = deltaA.Y
-			}
-			body.Vel.Add(body.Acc)
-			body.Pos.Add(body.Vel)
-
 			// Check if body is 1) higher than escape velocity and 2) is more more
 			// than 2X screens from center.
 			if w.escaped(body) {
@@ -205,10 +283,14 @@ func (w *World) tick() {
 				}
 			}
 		}
+
+		// Handle escaping bodies
 		for _, escaper := range escaping {
 			fmt.Printf("%v: ESCAPED: %v\n", w.worldTime(), escaper)
 			w.removeBody(escaper)
 		}
+
+		// Handle collisions
 		for _, group := range colliding {
 			var big *body.Body
 			for b, _ := range group {
@@ -224,6 +306,71 @@ func (w *World) tick() {
 				}
 			}
 		}
+	}
+}
+
+// New helper functions for RK4 implementation
+// Calculate accelerations for all bodies and store in the provided slice
+func (w *World) calculateAllAccelerations(accelerations []vector.Vector) {
+	channels := make([]chan vector.Vector, len(w.bodies))
+
+	for i, body := range w.bodies {
+		channels[i] = make(chan vector.Vector)
+		go w.calculateAcceleration(body, channels[i])
+	}
+
+	for i, ch := range channels {
+		acc := <-ch
+		if !math.IsNaN(acc.X) && !math.IsNaN(acc.Y) {
+			accelerations[i] = acc
+			w.bodies[i].Acc = acc  // Update body's acceleration
+		} else {
+			// Handle NaN case
+			accelerations[i] = vector.Vector{0, 0, 0}
+		}
+	}
+}
+
+// Apply half step for midpoint calculations
+func (w *World) applyHalfStep(initialPos, initialVel, velDelta, accDelta []vector.Vector) {
+	for i, body := range w.bodies {
+		// Position = initial + 0.5 * velocity * dt
+		body.Pos.X = initialPos[i].X + 0.5 * velDelta[i].X
+		body.Pos.Y = initialPos[i].Y + 0.5 * velDelta[i].Y
+		body.Pos.Z = initialPos[i].Z + 0.5 * velDelta[i].Z
+
+		// Velocity = initial + 0.5 * acceleration * dt
+		body.Vel.X = initialVel[i].X + 0.5 * accDelta[i].X
+		body.Vel.Y = initialVel[i].Y + 0.5 * accDelta[i].Y
+		body.Vel.Z = initialVel[i].Z + 0.5 * accDelta[i].Z
+	}
+}
+
+// Apply full step for final k4 calculation
+func (w *World) applyFullStep(initialPos, initialVel, velDelta, accDelta []vector.Vector) {
+	for i, body := range w.bodies {
+		// Position = initial + velocity * dt
+		body.Pos.X = initialPos[i].X + velDelta[i].X
+		body.Pos.Y = initialPos[i].Y + velDelta[i].Y
+		body.Pos.Z = initialPos[i].Z + velDelta[i].Z
+
+		// Velocity = initial + acceleration * dt
+		body.Vel.X = initialVel[i].X + accDelta[i].X
+		body.Vel.Y = initialVel[i].Y + accDelta[i].Y
+		body.Vel.Z = initialVel[i].Z + accDelta[i].Z
+	}
+}
+
+// Reset all bodies to their initial state
+func (w *World) resetToInitial(initialPos, initialVel []vector.Vector) {
+	for i, body := range w.bodies {
+		body.Pos.X = initialPos[i].X
+		body.Pos.Y = initialPos[i].Y
+		body.Pos.Z = initialPos[i].Z
+
+		body.Vel.X = initialVel[i].X
+		body.Vel.Y = initialVel[i].Y
+		body.Vel.Z = initialVel[i].Z
 	}
 }
 
